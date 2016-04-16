@@ -99,7 +99,6 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         messageBuilder.append("*Views:* ${NumberFormat.getInstance().format(metadata.viewCount)}\n")
         messageBuilder.append("👍 ${NumberFormat.getInstance().format(metadata.likes)}\n")
         messageBuilder.append("👎 ${NumberFormat.getInstance().format(metadata.dislikes)}\n")
-        messageBuilder.append("[Watch here](${metadata.url})")
 
         return messageBuilder.toString()
     }
