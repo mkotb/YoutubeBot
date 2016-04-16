@@ -68,8 +68,23 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         chat.sendMessage(video.sendable())
     }
 
-    // TODO for now
     fun sendPlaylist(chat: Chat, link: String) {
+        chat.sendMessage("Downloading all videos and extracting their audio... This will take a while.")
+        var regex = instance.playlistRegex.matcher(link)
+        regex.matches()
+        var playlist = instance.downloadPlaylist(PlaylistOptions(true), regex.group(regex.groupCount()))
+
+        chat.sendMessage("Finished processing! Sending ${playlist.videoList.size} videos...")
+
+        for (video in playlist.videoList) {
+            chat.sendMessage(SendableTextMessage.builder()
+                    .message(descriptionFor(video))
+                    .parseMode(ParseMode.MARKDOWN)
+                    .build())
+            chat.sendMessage(video.sendable())
+        }
+
+        chat.sendMessage("Finished sending playlist!")
     }
 
     fun descriptionFor(video: YoutubeVideo): String {

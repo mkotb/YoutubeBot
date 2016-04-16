@@ -71,7 +71,7 @@ class YoutubeBot(val key: String) {
 
         folder.mkdirs()
 
-        var commandBuilder = LinkedList<String>(Arrays.asList("./youtube-dl", "--yes-playlist",
+        var commandBuilder = LinkedList<String>(Arrays.asList("./../youtube-dl", "--yes-playlist",
                 "--write-info-json", "--id", "--audio-format", "mp3", "--audio-quality", "0", "-x"))
 
         if (!"null".equals(options.matchRegex)) {
@@ -86,7 +86,7 @@ class YoutubeBot(val key: String) {
 
         commandBuilder.add("https://www.youtube.com/playlist?list=$id")
 
-        ProcessBuilder().command(commandBuilder.toString())
+        ProcessBuilder().command(commandBuilder)
                 .directory(folder)
                 .start()
                 .waitFor()
@@ -94,10 +94,8 @@ class YoutubeBot(val key: String) {
         // because I'm lazy
         var playlist = YoutubePlaylist(id)
 
-        for (f in folder.listFiles({dir, name -> name.endsWith(".info.json")})) {
-            playlist.videoList.add(YoutubeVideo(f.nameWithoutExtension,
-                    File(f.parentFile, f.nameWithoutExtension + ".mp3"),
-                    playlist).fetchMetadata())
+        for (f in folder.listFiles({dir, name -> name.endsWith(".mp3")})) {
+            playlist.videoList.add(YoutubeVideo(f.nameWithoutExtension, f, playlist).fetchMetadata())
         }
 
         return playlist
@@ -110,5 +108,5 @@ class YoutubeBot(val key: String) {
    (regex included)
  - Add suggestions to send
    thumbnails
-
+ - Utilize playlist options
  ************************/
