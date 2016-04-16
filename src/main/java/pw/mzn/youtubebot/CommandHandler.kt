@@ -7,6 +7,7 @@ import pro.zackpollard.telegrambot.api.event.Listener
 import pro.zackpollard.telegrambot.api.event.chat.message.CommandMessageReceivedEvent
 import pro.zackpollard.telegrambot.api.keyboards.InlineKeyboardButton
 import pro.zackpollard.telegrambot.api.keyboards.InlineKeyboardMarkup
+import java.io.File
 import java.text.NumberFormat
 
 class CommandHandler(val instance: YoutubeBot): Listener {
@@ -66,6 +67,8 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                 .parseMode(ParseMode.MARKDOWN)
                 .build())
         chat.sendMessage(video.sendable())
+        video.file.delete()
+        File("${video.id}.info.json").delete()
     }
 
     fun sendPlaylist(chat: Chat, link: String) {
@@ -85,6 +88,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         }
 
         chat.sendMessage("Finished sending playlist!")
+        playlist.folder.delete() // bye bye
     }
 
     fun descriptionFor(video: YoutubeVideo): String {
