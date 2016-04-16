@@ -30,12 +30,14 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             }
 
             if (matchesVideo && matchesPlaylist) {
+                videoMatcher = instance.videoRegex.matcher(link)
+                playlistMatcher = instance.playlistRegex.matcher(link)
+
                 videoMatcher.matches()
                 playlistMatcher.matches()
+
                 val selectionKeyboard = InlineKeyboardMarkup.builder()
-                        .addRow(InlineKeyboardButton.builder().text("Playlist")
-                                                     .callbackData("p.${playlistMatcher.group(playlistMatcher.groupCount())}")
-                                                     .build(),
+                        .addRow(InlineKeyboardButton.builder().text("Playlist").callbackData("p.${playlistMatcher.group(2)}").build(),
                                 InlineKeyboardButton.builder().text("Video").callbackData("v.${videoMatcher.group(1)}").build())
                         .build()
                 var response = SendableTextMessage.builder()
