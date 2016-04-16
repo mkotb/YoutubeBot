@@ -30,9 +30,6 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             }
 
             if (matchesVideo && matchesPlaylist) {
-                videoMatcher = instance.videoRegex.matcher(link)
-                playlistMatcher = instance.playlistRegex.matcher(link)
-
                 videoMatcher.matches()
                 playlistMatcher.matches()
 
