@@ -30,9 +30,13 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             }
 
             if (matchesVideo && matchesPlaylist) {
+                videoMatcher.matches()
+                playlistMatcher.matches()
                 val selectionKeyboard = InlineKeyboardMarkup.builder()
-                        .addRow(InlineKeyboardButton.builder().text("Playlist").callbackData("zackisGay").build(),
-                                InlineKeyboardButton.builder().text("Video").callbackData("zackissupergay").build())
+                        .addRow(InlineKeyboardButton.builder().text("Playlist")
+                                                     .callbackData("p.${playlistMatcher.group(playlistMatcher.groupCount())}")
+                                                     .build(),
+                                InlineKeyboardButton.builder().text("Video").callbackData("v.${videoMatcher.group(1)}").build())
                         .build()
                 var response = SendableTextMessage.builder()
                         .message("That link matches both a playlist and a video, which of those would you" +
