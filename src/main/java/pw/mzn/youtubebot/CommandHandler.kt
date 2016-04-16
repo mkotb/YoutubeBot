@@ -31,8 +31,8 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
             if (matchesVideo && matchesPlaylist) {
                 val selectionKeyboard = InlineKeyboardMarkup.builder()
-                        .addRow(InlineKeyboardButton.builder().text("Playlist").callbackData("p.$link").build(),
-                                InlineKeyboardButton.builder().text("Video").callbackData("v.$link").build())
+                        .addRow(InlineKeyboardButton.builder().text("Playlist").callbackData("zackisGay").build(),
+                                InlineKeyboardButton.builder().text("Video").callbackData("zackissupergay").build())
                         .build()
                 var response = SendableTextMessage.builder()
                         .message("That link matches both a playlist and a video, which of those would you" +
