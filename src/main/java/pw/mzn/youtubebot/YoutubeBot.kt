@@ -136,7 +136,7 @@ class YoutubeBot(val key: String, val youtubeKey: String) {
         }
 
         var indices = arrayOf(arrayOf("H", 3600), arrayOf("M", 60), arrayOf("S", 1))
-        var parse = parts[2]
+        var parse = parts[1]
         var seconds = 0L
 
         for (ind in indices) {
