@@ -68,6 +68,7 @@ class YoutubeBot(val key: String, val youtubeKey: String) {
         search.key = youtubeKey
         search.q = query
         search.type = "video"
+        search.videoDuration = "short"
         search.fields = "items(id/kind,id/videoId,snippet/title,snippet/thumbnails/default/url,snippet/channelTitle)"
         search.maxResults = 10
 

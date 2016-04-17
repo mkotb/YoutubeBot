@@ -19,6 +19,10 @@ import java.util.*
 
 class CommandHandler(val instance: YoutubeBot): Listener {
     override fun onCommandMessageReceived(event: CommandMessageReceivedEvent?) {
+        Thread() { processCommand(event) }.start()
+    }
+
+    fun processCommand(event: CommandMessageReceivedEvent?) {
         if ("download".equals(event!!.command)) {
             if (event.args.size < 1) {
                 event.chat.sendMessage("give me")
@@ -61,11 +65,44 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             }
 
             if (matchesVideo) {
+                // check video length
+                var search = instance.youtube.videos().list("contentDetails")
+                var regex = instance.videoRegex.matcher(link)
+                regex.matches()
+
+                search.id = regex.group(1)
+                search.fields = "items(contentDetails/duration)"
+                var response = search.execute()
+
+                if (response.items.isEmpty()) {
+                    event.chat.sendMessage("Unable to find any Youtube video by that ID!")
+                    return
+                }
+
+                if (response.items[0].contentDetails.duration.toLong() > 1800L) {
+                    event.chat.sendMessage("This bot is unable to process videos longer than 30 minutes! Sorry!")
+                    return
+                }
+
                 sendVideo(event.chat, link, true)
                 return
             }
 
             if (matchesPlaylist) {
+                // attempt to find said playlist
+                var search = instance.youtube.playlists().list("id")
+                var regex = instance.playlistRegex.matcher(link)
+                regex.matches()
+
+                search.id = regex.group(regex.groupCount())
+                search.fields = "items(id)"
+                var response = search.execute()
+
+                if (response.items.isEmpty()) {
+                    event.chat.sendMessage("Unable to find any playlists by that ID!")
+                    return
+                }
+
                 sendPlaylist(event.chat, link)
                 return
             }
@@ -82,7 +119,6 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                     .thumbUrl(URL(e.snippet.thumbnails.default.url))
                     .title(e.snippet.title)
                     .messageText("Uploaded by ${e.snippet.channelTitle}")
-                    .id(e.id.videoId)
                     .build())
         } }
 
