@@ -14,10 +14,20 @@ data class YoutubeVideo(val id: String, val file: File, val owningPlaylist: Yout
     fun fetchMetadata(): YoutubeVideo {
         var mdJson = JSONObject(Files.readAllLines(Paths.get(file.absolutePath.replace("$id.mp3", "$id.info.json")))
                 .joinToString(""))
+        var likeCount = 0
+        var dislikeCount = 0
+
+        if (mdJson.get("like_count") is Int) {
+            likeCount = mdJson.getInt("like_count")
+        }
+
+        if (mdJson.get("dislike_count") is Int) {
+            dislikeCount = mdJson.getInt("dislike_count")
+        }
 
         metadata = VideoMetadata(mdJson.getString("fulltitle"), mdJson.getInt("duration"),
-                mdJson.getString("thumbnail"), mdJson.getLong("view_count"), mdJson.getInt("like_count"),
-                mdJson.getInt("dislike_count"), mdJson.getString("uploader"), mdJson.getString("webpage_url"),
+                mdJson.getString("thumbnail"), mdJson.getLong("view_count"), likeCount,
+                dislikeCount, mdJson.getString("uploader"), mdJson.getString("webpage_url"),
                 this)
         return this
     }
