@@ -1,14 +1,21 @@
 package pw.mzn.youtubebot
 
 import pro.zackpollard.telegrambot.api.chat.Chat
+import pro.zackpollard.telegrambot.api.chat.inline.send.InlineQueryResponse
+import pro.zackpollard.telegrambot.api.chat.inline.send.results.InlineQueryResult
+import pro.zackpollard.telegrambot.api.chat.inline.send.results.InlineQueryResultArticle
 import pro.zackpollard.telegrambot.api.chat.message.send.ParseMode
 import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage
 import pro.zackpollard.telegrambot.api.event.Listener
+import pro.zackpollard.telegrambot.api.event.chat.inline.InlineCallbackQueryReceivedEvent
+import pro.zackpollard.telegrambot.api.event.chat.inline.InlineQueryReceivedEvent
 import pro.zackpollard.telegrambot.api.event.chat.message.CommandMessageReceivedEvent
 import pro.zackpollard.telegrambot.api.keyboards.InlineKeyboardButton
 import pro.zackpollard.telegrambot.api.keyboards.InlineKeyboardMarkup
 import java.io.File
+import java.net.URL
 import java.text.NumberFormat
+import java.util.*
 
 class CommandHandler(val instance: YoutubeBot): Listener {
     override fun onCommandMessageReceived(event: CommandMessageReceivedEvent?) {
@@ -25,8 +32,14 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             var matchesPlaylist = playlistMatcher.find()
 
             if (!matchesVideo && !matchesPlaylist) {
-                event.chat.sendMessage("Please provide a correct Youtube Video link!")
-                return
+                var response = instance.search(event.argsString)
+                var result = response.items[0]
+
+                if (result != null && "youtube#video".equals(result.id.kind)) {
+                    sendVideo(event.chat, "https://www.youtube.com/watch?v=${result.id.videoId}")
+                } else {
+                    event.chat.sendMessage("No videos were found by that query!")
+                }
             }
 
             if (matchesVideo && matchesPlaylist) {
@@ -57,6 +70,29 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                 return
             }
         }
+    }
+
+    override fun onInlineQueryReceived(event: InlineQueryReceivedEvent?) {
+        var query = event!!.query
+        var response = instance.search(query.query)
+        var videos = ArrayList<InlineQueryResult>(response.size)
+
+        response.items.forEach { e -> run {
+            videos.add(InlineQueryResultArticle.builder()
+                    .thumbUrl(URL(e.snippet.thumbnails.default.url))
+                    .title(e.snippet.title)
+                    .messageText("Uploaded by ${e.snippet.channelTitle}")
+                    .id(e.id.videoId)
+                    .build())
+        } }
+
+        query.answer(instance.bot, InlineQueryResponse.builder().results(videos).build())
+    }
+
+    override fun onInlineCallbackQueryReceivedEvent(event: InlineCallbackQueryReceivedEvent?) {
+        var query = event!!.callbackQuery
+
+        // TODO respond properly
     }
 
     fun sendVideo(chat: Chat, link: String) {

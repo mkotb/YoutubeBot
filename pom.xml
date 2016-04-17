@@ -27,6 +27,12 @@
             <version>20150729</version>
             <scope>compile</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.google.apis</groupId>
+            <artifactId>google-api-services-youtube</artifactId>
+            <version>v3-rev165-1.21.0</version>
+        </dependency>
     </dependencies>
 
     <build>

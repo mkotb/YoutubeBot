@@ -1,5 +1,10 @@
 package pw.mzn.youtubebot
 
+import com.google.api.client.http.HttpRequestInitializer
+import com.google.api.client.http.javanet.NetHttpTransport
+import com.google.api.client.json.jackson2.JacksonFactory
+import com.google.api.services.youtube.YouTube
+import com.google.api.services.youtube.model.SearchListResponse
 import com.mashape.unirest.http.Unirest
 import pro.zackpollard.telegrambot.api.TelegramBot
 import java.io.File
@@ -10,17 +15,24 @@ import java.util.regex.Pattern
 import kotlin.properties.Delegates
 import kotlin.system.exitProcess
 
-class YoutubeBot(val key: String) {
+class YoutubeBot(val key: String, val youtubeKey: String) {
     val playlistRegex = Pattern.compile("^.*(youtu\\.be\\/|list=)([^#&?]*).*")
     val videoRegex = Pattern.compile("^(?:https?:\\/\\/)?(?:www\\.)?(?:youtube\\.com|youtu\\.be)\\/watch\\?v=([^&]+)")
     val executable = File("youtube-dl")
     var bot: TelegramBot by Delegates.notNull()
+    var youtube: YouTube by Delegates.notNull()
 
     fun init() {
         downloadExecutable()
+
         bot = TelegramBot.login(key)
         bot.eventsManager.register(CommandHandler(this))
         bot.startUpdates(false)
+
+        youtube = YouTube.Builder(NetHttpTransport(), JacksonFactory(), HttpRequestInitializer {  })
+                .setApplicationName("ayylmaoproj") // don't ask
+                .build()
+
         println("Logged into Telegram!")
     }
 
@@ -48,6 +60,18 @@ class YoutubeBot(val key: String) {
         list.forEach { e -> builder.append(e.toString()).append(splitter) }
 
         return builder.toString()
+    }
+
+    fun search(query: String): SearchListResponse {
+        var search = youtube.search().list("id,snippet")
+
+        search.key = youtubeKey
+        search.q = query
+        search.type = "video"
+        search.fields = "items(id/kind,id/videoId,snippet/title,snippet/thumbnails/default/url,snippet/channelTitle)"
+        search.maxResults = 10
+
+        return search.execute()
     }
 
     fun downloadVideo(id: String): YoutubeVideo {
@@ -104,6 +128,7 @@ class YoutubeBot(val key: String) {
 
 /************************
         TODO List
+ - Inline video searching
  - Playlist selection
    (regex included)
  - Add suggestions to send
