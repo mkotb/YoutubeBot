@@ -36,7 +36,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                 var result = response.items[0]
 
                 if (result != null && "youtube#video".equals(result.id.kind)) {
-                    sendVideo(event.chat, "https://www.youtube.com/watch?v=${result.id.videoId}")
+                    sendVideo(event.chat, "https://www.youtube.com/watch?v=${result.id.videoId}", false)
                 } else {
                     event.chat.sendMessage("No videos were found by that query!")
                 }
@@ -61,7 +61,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             }
 
             if (matchesVideo) {
-                sendVideo(event.chat, link)
+                sendVideo(event.chat, link, true)
                 return
             }
 
@@ -95,14 +95,14 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         // TODO respond properly
     }
 
-    fun sendVideo(chat: Chat, link: String) {
+    fun sendVideo(chat: Chat, link: String, linkSent: Boolean) {
         chat.sendMessage("Downloading video and extracting audio (Depending on duration of video, this may take a while)")
         var regex = instance.videoRegex.matcher(link)
         regex.matches()
         var video = instance.downloadVideo(regex.group(1))
 
         chat.sendMessage(SendableTextMessage.builder()
-                .message(descriptionFor(video))
+                .message(descriptionFor(video, linkSent))
                 .parseMode(ParseMode.MARKDOWN)
                 .build())
         chat.sendMessage(video.sendable())
@@ -120,7 +120,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         for (video in playlist.videoList) {
             chat.sendMessage(SendableTextMessage.builder()
-                    .message(descriptionFor(video))
+                    .message(descriptionFor(video, true))
                     .parseMode(ParseMode.MARKDOWN)
                     .build())
             chat.sendMessage(video.sendable())
@@ -130,7 +130,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         playlist.folder.delete() // bye bye
     }
 
-    fun descriptionFor(video: YoutubeVideo): String {
+    fun descriptionFor(video: YoutubeVideo, linkSent: Boolean): String {
         var metadata = video.metadata
         var messageBuilder = StringBuilder("*${metadata.name}*\n")
 
@@ -138,6 +138,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         messageBuilder.append("*Views:* ${NumberFormat.getInstance().format(metadata.viewCount)}\n")
         messageBuilder.append("👍 ${NumberFormat.getInstance().format(metadata.likes)}\n")
         messageBuilder.append("👎 ${NumberFormat.getInstance().format(metadata.dislikes)}\n")
+
+        if (!linkSent) {
+            messageBuilder.append("[Watch here!](${metadata.url})\n")
+        }
 
         return messageBuilder.toString()
     }
