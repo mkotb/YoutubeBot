@@ -72,6 +72,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
                 search.id = regex.group(1)
                 search.fields = "items(contentDetails/duration)"
+                search.key = instance.youtubeKey
                 var response = search.execute()
 
                 if (response.items.isEmpty()) {
@@ -96,6 +97,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
                 search.id = regex.group(regex.groupCount())
                 search.fields = "items(id)"
+                search.key = instance.youtubeKey
                 var response = search.execute()
 
                 if (response.items.isEmpty()) {
