@@ -10,6 +10,7 @@ import pro.zackpollard.telegrambot.api.TelegramBot
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.time.Period
 import java.util.*
 import java.util.regex.Pattern
 import kotlin.properties.Delegates
@@ -124,6 +125,31 @@ class YoutubeBot(val key: String, val youtubeKey: String) {
         }
 
         return playlist
+    }
+
+    fun parse8601Duration(i: String): Long {
+        var parts = i.split("T")
+        var days = 0
+
+        if (!"P".equals(parts[0])) {
+            days = Period.parse(parts[0]).days
+        }
+
+        var indices = arrayOf(arrayOf("H", 3600), arrayOf("M", 60), arrayOf("S", 1))
+        var parse = parts[2]
+        var seconds = 0L
+
+        for (ind in indices) {
+            var position = parse.indexOf(ind[0].toString())
+
+            if (position != -1) {
+                var value = parse.substring(0, position)
+                seconds += value.toInt() * ind[1].toString().toInt()
+                parse = parse.substring(value.length + 1)
+            }
+        }
+
+        return days * 86400 + seconds
     }
 }
 

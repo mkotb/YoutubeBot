@@ -16,6 +16,7 @@ import java.io.File
 import java.net.URL
 import java.text.NumberFormat
 import java.time.Duration
+import java.time.Period
 import java.util.*
 
 class CommandHandler(val instance: YoutubeBot): Listener {
@@ -81,7 +82,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                     return
                 }
 
-                if (Duration.parse(response.items[0].contentDetails.duration).seconds > 1800L) { // god bless you java 8 (ISO 8601)
+                if (instance.parse8601Duration(response.items[0].contentDetails.duration) > 1800L) {
                     event.chat.sendMessage("This bot is unable to process videos longer than 30 minutes! Sorry!")
                     return
                 }
