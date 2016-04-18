@@ -118,11 +118,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
     }
 
     override fun onCallbackQueryReceivedEvent(event: CallbackQueryReceivedEvent?) {
-        println("got callback query m8") // debug
         var callback = event!!.callbackQuery
         var data = callback.data
 
-        if (!data.startsWith("v.") || !data.startsWith("p.")) { // validate
+        if (!data.startsWith("v.") && !data.startsWith("p.")) { // validate
             println("doesn't start right $data")
             return
         }
