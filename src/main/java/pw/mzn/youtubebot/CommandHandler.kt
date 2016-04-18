@@ -137,7 +137,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         var session = inlineList.get(sessionId) ?: return // stop returning bad data
 
-        if (session.userId == callback.from.id) {
+        if (session.userId != callback.from.id) {
             println("session which belongs to ${session.userId} doesn't match sender ${callback.from.id}")
             return // ensure session belongs to this user
         }
