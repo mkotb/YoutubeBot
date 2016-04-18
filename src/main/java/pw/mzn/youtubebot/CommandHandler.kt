@@ -51,7 +51,8 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
             if (matchesVideo && matchesPlaylist) {
                 var videoMatch = videoMatcher.group(1)
-                playlistMatcher.find()
+                playlistMatcher = instance.playlistRegex.matcher(link)
+                playlistMatcher.lookingAt()
                 var sessionId = inlineList.add(CommandSession(videoMatch, playlistMatcher.group(2), event.chat,
                         event.message.sender.id))
 
