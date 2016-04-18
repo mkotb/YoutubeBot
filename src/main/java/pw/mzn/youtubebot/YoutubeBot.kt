@@ -156,9 +156,6 @@ class YoutubeBot(val key: String, val youtubeKey: String) {
 /************************
         TODO List
  - Inline video searching
- - Playlist selection
-   (regex included)
  - Add suggestions to send
    thumbnails
- - Utilize playlist options
  ************************/
