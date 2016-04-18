@@ -32,7 +32,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                 return
             }
 
-            var link = event.args[0] // i'd be surprised if we made it here
+            var link = event.args[0]
             var videoMatcher = instance.videoRegex.matcher(link)
             var playlistMatcher = instance.playlistRegex.matcher(link)
             var matchesVideo = videoMatcher.find()
@@ -50,13 +50,9 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             }
 
             if (matchesVideo && matchesPlaylist) {
-                var regex = instance.videoRegex.matcher(link)
-                regex.matches()
-                var videoMatch = regex.group(1)
-
-                regex = instance.playlistRegex.matcher(link)
-                regex.matches()
-                var sessionId = inlineList.add(CommandSession(videoMatch, regex.group(2), event.chat,
+                var videoMatch = videoMatcher.group(1)
+                playlistMatcher.find()
+                var sessionId = inlineList.add(CommandSession(videoMatch, playlistMatcher.group(2), event.chat,
                         event.message.sender.id))
 
                 val selectionKeyboard = InlineKeyboardMarkup.builder()
