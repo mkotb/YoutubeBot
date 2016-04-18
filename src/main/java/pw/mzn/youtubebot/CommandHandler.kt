@@ -142,6 +142,8 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             return // ensure session belongs to this user
         }
 
+        callback.answer("Selecting...", false)
+
         if (data.startsWith("v.")) {
             sendVideo(session.chat, "https://www.youtube.com/watch?v=${session.videoMatch}", true)
         } else {
