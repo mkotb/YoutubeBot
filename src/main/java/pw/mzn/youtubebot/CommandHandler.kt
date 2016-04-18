@@ -7,6 +7,7 @@ import pro.zackpollard.telegrambot.api.chat.inline.send.results.InlineQueryResul
 import pro.zackpollard.telegrambot.api.chat.message.send.ParseMode
 import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage
 import pro.zackpollard.telegrambot.api.event.Listener
+import pro.zackpollard.telegrambot.api.event.chat.CallbackQueryReceivedEvent
 import pro.zackpollard.telegrambot.api.event.chat.inline.InlineCallbackQueryReceivedEvent
 import pro.zackpollard.telegrambot.api.event.chat.inline.InlineQueryReceivedEvent
 import pro.zackpollard.telegrambot.api.event.chat.message.CommandMessageReceivedEvent
@@ -15,11 +16,11 @@ import pro.zackpollard.telegrambot.api.keyboards.InlineKeyboardMarkup
 import java.io.File
 import java.net.URL
 import java.text.NumberFormat
-import java.time.Duration
-import java.time.Period
 import java.util.*
 
 class CommandHandler(val instance: YoutubeBot): Listener {
+    private val inlineList = IdList<CommandSession>()
+
     override fun onCommandMessageReceived(event: CommandMessageReceivedEvent?) {
         Thread() { processCommand(event) }.start()
     }
@@ -49,12 +50,18 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             }
 
             if (matchesVideo && matchesPlaylist) {
-                videoMatcher.matches()
-                playlistMatcher.matches()
+                var regex = instance.videoRegex.matcher(link)
+                regex.matches()
+                var videoMatch = regex.group(1)
+
+                regex = instance.playlistRegex.matcher(link)
+                regex.matches()
+                var sessionId = inlineList.add(CommandSession(videoMatch, regex.group(2), event.chat,
+                        event.message.sender.id))
 
                 val selectionKeyboard = InlineKeyboardMarkup.builder()
-                        .addRow(InlineKeyboardButton.builder().text("Playlist").callbackData("p.${playlistMatcher.group(2)}").build(),
-                                InlineKeyboardButton.builder().text("Video").callbackData("v.${videoMatcher.group(1)}").build())
+                        .addRow(InlineKeyboardButton.builder().text("Playlist").callbackData("p.$sessionId").build(),
+                                InlineKeyboardButton.builder().text("Video").callbackData("v.$sessionId").build())
                         .build()
                 var response = SendableTextMessage.builder()
                         .message("That link matches both a playlist and a video, which of those would you" +
@@ -111,6 +118,41 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                 return
             }
         }
+    }
+
+    override fun onCallbackQueryReceivedEvent(event: CallbackQueryReceivedEvent?) {
+        println("got callback query m8") // debug
+        var callback = event!!.callbackQuery
+        var data = callback.data
+
+        if (!data.startsWith("v.") || !data.startsWith("p.")) { // validate
+            println("doesn't start right $data")
+            return
+        }
+
+        var sessionId: Int
+
+        try {
+            sessionId = data.split(".")[1].toInt()
+        } catch (ignored: Exception) {
+            println("not an int after . $data")
+            return // r00d for returning bad data
+        }
+
+        var session = inlineList.get(sessionId) ?: return // stop returning bad data
+
+        if (session.userId == callback.from.id) {
+            println("session which belongs to ${session.userId} doesn't match sender ${callback.from.id}")
+            return // ensure session belongs to this user
+        }
+
+        if (data.startsWith("v.")) {
+            sendVideo(session.chat, "https://www.youtube.com/watch?v=${session.videoMatch}", true)
+        } else {
+            sendPlaylist(session.chat, "https://www.youtube.com/playlist?list=${session.playlistMatch}")
+        }
+
+        inlineList.remove(session)
     }
 
     override fun onInlineQueryReceived(event: InlineQueryReceivedEvent?) {
@@ -186,3 +228,6 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         return messageBuilder.toString()
     }
 }
+
+private data class CommandSession(val videoMatch: String, val playlistMatch: String, val chat: Chat,
+                                  val userId: Long)
