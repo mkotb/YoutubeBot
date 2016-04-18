@@ -92,8 +92,8 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                     return
                 }
 
-                if (instance.parse8601Duration(response.items[0].contentDetails.duration) > 1800L) {
-                    event.chat.sendMessage("This bot is unable to process videos longer than 30 minutes! Sorry!")
+                if (instance.parse8601Duration(response.items[0].contentDetails.duration) > 14400L) {
+                    event.chat.sendMessage("This bot is unable to process videos longer than 4 hours! Sorry!")
                     return
                 }
 
