@@ -383,7 +383,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
     }*/
 
     fun sendVideo(chat: Chat, link: String, linkSent: Boolean, originalQuery: Message?, userId: Long) {
-        timeoutCache.put(userId, null)
+        timeoutCache.put(userId, Object())
         var reply = SendableTextMessage.builder()
                 .message("Downloading video and extracting audio (Depending on duration of video, " +
                         "this may take a while)")
@@ -437,7 +437,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             option = PlaylistOptions(true)
         }
 
-        timeoutCache.put(userId, null)
+        timeoutCache.put(userId, Object())
         chat.sendMessage(SendableTextMessage.builder()
                 .message("Downloading all videos and extracting their audio... This will take a while.")
                 .replyMarkup(ReplyKeyboardHide.builder().selective(true).build())
