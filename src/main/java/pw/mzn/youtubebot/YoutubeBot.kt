@@ -151,11 +151,7 @@ class PlaylistCallable(val options: PlaylistOptions, val id: String): Callable<Y
                 .directory(folder)
                 .redirectErrorStream(true)
                 .start()
-
-        process.waitFor()
-        var reader = InputStreamReader(process.inputStream)
-        var lines = reader.readLines()
-        lines.forEach { e -> println(e) }
+                .waitFor()
 
         // because I'm lazy
         var playlist = YoutubePlaylist(id)
@@ -171,8 +167,9 @@ class PlaylistCallable(val options: PlaylistOptions, val id: String): Callable<Y
         var builder = StringBuilder()
 
         list.forEach { e -> builder.append(e.toString()).append(splitter) }
+        var str = builder.toString()
 
-        return builder.toString()
+        return str.substring(0, str.length - 1)
     }
 }
 
