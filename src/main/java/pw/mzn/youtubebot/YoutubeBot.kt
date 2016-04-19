@@ -137,13 +137,13 @@ class PlaylistCallable(val options: PlaylistOptions, val id: String): Callable<Y
             commandBuilder.add("'" + options.matchRegex.replace("'", "\'") + "'") // single quotes to avoid escaping
         }
 
-        if (!options.allVideos) {
+        if (!options.allVideos && !options.videoSelection.isEmpty()) {
             commandBuilder.add("--playlist-items")
             commandBuilder.add(addSplit(options.videoSelection, ","))
         }
 
         commandBuilder.add("https://www.youtube.com/playlist?list=$id")
-        
+
         println(addSplit(commandBuilder, " ") + " is executing")
 
         ProcessBuilder().command(commandBuilder)
