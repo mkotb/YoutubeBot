@@ -160,6 +160,8 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             keyboard.addRow(KeyboardButton.builder().text(title).build())
         }
 
+        keyboard.selective(true)
+
         userSearch.put(userId, cachedVids)
         var message = SendableTextMessage.builder()
                 .message("Searched for $query, please select the one of the following")
@@ -412,7 +414,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         chat.sendMessage(SendableTextMessage.builder()
                 .message("Downloading all videos and extracting their audio... This will take a while.")
-                .replyMarkup(ReplyKeyboardHide.builder().build())
+                .replyMarkup(ReplyKeyboardHide.builder().selective(true).build())
                 .build())
         var regex = instance.playlistRegex.matcher(link)
         regex.matches()
