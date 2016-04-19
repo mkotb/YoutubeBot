@@ -5,6 +5,7 @@ import pro.zackpollard.telegrambot.api.chat.Chat
 import pro.zackpollard.telegrambot.api.chat.inline.send.InlineQueryResponse
 import pro.zackpollard.telegrambot.api.chat.inline.send.results.InlineQueryResult
 import pro.zackpollard.telegrambot.api.chat.inline.send.results.InlineQueryResultArticle
+import pro.zackpollard.telegrambot.api.chat.message.Message
 import pro.zackpollard.telegrambot.api.chat.message.content.TextContent
 import pro.zackpollard.telegrambot.api.chat.message.send.ParseMode
 import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage
@@ -13,15 +14,19 @@ import pro.zackpollard.telegrambot.api.event.chat.CallbackQueryReceivedEvent
 import pro.zackpollard.telegrambot.api.event.chat.inline.InlineCallbackQueryReceivedEvent
 import pro.zackpollard.telegrambot.api.event.chat.inline.InlineQueryReceivedEvent
 import pro.zackpollard.telegrambot.api.event.chat.message.CommandMessageReceivedEvent
-import pro.zackpollard.telegrambot.api.event.chat.message.MessageReceivedEvent
+import pro.zackpollard.telegrambot.api.event.chat.message.TextMessageReceivedEvent
 import pro.zackpollard.telegrambot.api.keyboards.InlineKeyboardButton
 import pro.zackpollard.telegrambot.api.keyboards.InlineKeyboardMarkup
+import pro.zackpollard.telegrambot.api.keyboards.KeyboardButton
+import pro.zackpollard.telegrambot.api.keyboards.ReplyKeyboardMarkup
 import java.io.File
 import java.net.URL
 import java.text.NumberFormat
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 class CommandHandler(val instance: YoutubeBot): Listener {
+    private val userSearch = ConcurrentHashMap<Long, List<CachedYoutubeVideo>>()
     private val inlineList = IdList<CommandSession>()
     private val playlistSessions = IdList<PlaylistSession>()
 
@@ -36,91 +41,134 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                 return
             }
 
-            flushSessions(event.message.sender.id, event.chat.id)
-
-            var link = event.args[0]
-            var videoMatcher = instance.videoRegex.matcher(link)
-            var playlistMatcher = instance.playlistRegex.matcher(link)
-            var matchesVideo = videoMatcher.find()
-            var matchesPlaylist = playlistMatcher.find()
-
-            if (!matchesVideo && !matchesPlaylist) {
-                var response = instance.search(event.argsString)
-                var result = response.items[0]
-
-                if (result != null && "youtube#video".equals(result.id.kind)) {
-                    sendVideo(event.chat, "https://www.youtube.com/watch?v=${result.id.videoId}", false)
-                } else {
-                    event.chat.sendMessage("No videos were found by that query!")
-                }
-            }
-
-            if (matchesVideo && matchesPlaylist) {
-                var videoMatch = videoMatcher.group(1)
-                playlistMatcher = instance.playlistRegex.matcher(link)
-                playlistMatcher.lookingAt()
-                var sessionId = inlineList.add(CommandSession(videoMatch, playlistMatcher.group(2), event.chat,
-                        event.message.sender.id))
-
-                val selectionKeyboard = InlineKeyboardMarkup.builder()
-                        .addRow(InlineKeyboardButton.builder().text("Playlist").callbackData("p.$sessionId").build(),
-                                InlineKeyboardButton.builder().text("Video").callbackData("v.$sessionId").build())
-                        .build()
-                var response = SendableTextMessage.builder()
-                        .message("That link matches both a playlist and a video, which of those would you" +
-                                " like to download?")
-                        .replyMarkup(selectionKeyboard)
-                        .build()
-
-                event.chat.sendMessage(response) // next process of new data is in processSelectionInline()
-                return
-            }
-
-            if (matchesVideo) {
-                // check video length
-                var search = instance.youtube.videos().list("contentDetails")
-                var regex = instance.videoRegex.matcher(link)
-                regex.matches()
-
-                search.id = regex.group(1)
-                search.fields = "items(contentDetails/duration)"
-                search.key = instance.youtubeKey
-                var response = search.execute()
-
-                if (response.items.isEmpty()) {
-                    event.chat.sendMessage("Unable to find any Youtube video by that ID!")
-                    return
-                }
-
-                if (instance.parse8601Duration(response.items[0].contentDetails.duration) > 14400L) {
-                    event.chat.sendMessage("This bot is unable to process videos longer than 4 hours! Sorry!")
-                    return
-                }
-
-                sendVideo(event.chat, link, true)
-                return
-            }
-
-            if (matchesPlaylist) {
-                // attempt to find said playlist
-                var search = instance.youtube.playlists().list("id")
-                var regex = instance.playlistRegex.matcher(link)
-                regex.matches()
-
-                search.id = regex.group(regex.groupCount())
-                search.fields = "items(id)"
-                search.key = instance.youtubeKey
-                var response = search.execute()
-
-                if (response.items.isEmpty()) {
-                    event.chat.sendMessage("Unable to find any playlists by that ID!")
-                    return
-                }
-
-                sendPlaylist(event.chat, link, null)
-                return
-            }
+            processInput(event.argsString, event.chat, event.message)
+            return
         }
+
+         if ("start".equals(event.command)) {
+             event.chat.sendMessage("Hi! Welcome to the YouTube Downloader Bot, thanks for checking it out!" +
+                     "The premise of this bot is simple; you give it a video, it sends you it's audio." +
+                     "You can throw at it links from YouTube, or give it a search query such as " +
+                     "\"Stressed Out Tomize Remix\" and it'll respond to you as soon as it can. It also works " +
+                     "with playlists! You can make the bot download your favourite podcasts on YouTube or your " +
+                     "favourite songs. Give it a try, send any query!")
+             return
+         }
+    }
+
+    fun processInput(input: String, chat: Chat, message: Message) {
+        var userId = message.sender.id
+        var link = input.split(" ")[0]
+        var videoMatcher = instance.videoRegex.matcher(link)
+        var playlistMatcher = instance.playlistRegex.matcher(link)
+        var matchesVideo = videoMatcher.find()
+        var matchesPlaylist = playlistMatcher.find()
+
+        flushSessions(userId, chat.id)
+
+        if (!matchesVideo && !matchesPlaylist) {
+            processSearch(chat, input, userId)
+            return
+        }
+
+        if (matchesVideo && matchesPlaylist) {
+            var videoMatch = videoMatcher.group(1)
+            playlistMatcher = instance.playlistRegex.matcher(link)
+            playlistMatcher.lookingAt()
+            var sessionId = inlineList.add(CommandSession(videoMatch, playlistMatcher.group(2), chat,
+                    userId, message))
+
+            val selectionKeyboard = InlineKeyboardMarkup.builder()
+                    .addRow(InlineKeyboardButton.builder().text("Playlist").callbackData("p.$sessionId").build(),
+                            InlineKeyboardButton.builder().text("Video").callbackData("v.$sessionId").build())
+                    .build()
+            var response = SendableTextMessage.builder()
+                    .message("That link matches both a playlist and a video, which of those would you" +
+                            " like to download?")
+                    .replyMarkup(selectionKeyboard)
+                    .build()
+
+            chat.sendMessage(response) // next process of new data is in processSelectionInline()
+            return
+        }
+
+        if (matchesVideo) {
+            // check video length
+            var search = instance.youtube.videos().list("contentDetails")
+            var regex = instance.videoRegex.matcher(link)
+            regex.matches()
+
+            search.id = regex.group(1)
+            search.fields = "items(contentDetails/duration)"
+            search.key = instance.youtubeKey
+            var response = search.execute()
+
+            if (response.items.isEmpty()) {
+                chat.sendMessage("Unable to find any Youtube video by that ID!")
+                return
+            }
+
+            if (instance.parse8601Duration(response.items[0].contentDetails.duration) > 14400L) {
+                chat.sendMessage("This bot is unable to process videos longer than 4 hours! Sorry!")
+                return
+            }
+
+            sendVideo(chat, link, true, message)
+            return
+        }
+
+        if (matchesPlaylist) {
+            // attempt to find said playlist
+            var search = instance.youtube.playlists().list("id")
+            var regex = instance.playlistRegex.matcher(link)
+            regex.matches()
+
+            search.id = regex.group(regex.groupCount())
+            search.fields = "items(id)"
+            search.key = instance.youtubeKey
+            var response = search.execute()
+
+            if (response.items.isEmpty()) {
+                chat.sendMessage("Unable to find any playlists by that ID!")
+                return
+            }
+
+            sendPlaylist(chat, link, null)
+            return
+        }
+    }
+
+    fun processSearch(chat: Chat, query: String, userId: Long) {
+        var response = instance.search(query)
+
+        if (response.items == null || response.items.isEmpty()) {
+            chat.sendMessage("No videos were found by that query!")
+            return
+        }
+
+        var keyboard = ReplyKeyboardMarkup.builder()
+        var max = response.items.size
+
+        if (max > 5) {
+            max = 5
+        }
+
+        var cachedVids = ArrayList<CachedYoutubeVideo>()
+
+        for (i in 0..max) {
+            var entry = response.items[i]
+
+            cachedVids.add(CachedYoutubeVideo(entry.id.videoId, entry.snippet.title))
+            keyboard.addRow(KeyboardButton.builder().text(entry.snippet.title).build())
+        }
+
+        userSearch.put(userId, cachedVids)
+        var message = SendableTextMessage.builder()
+                .message("Searched for $query, please select the one of the following")
+                .replyMarkup(keyboard.build())
+                .build()
+
+        chat.sendMessage(message)
     }
 
     fun flushSessions(userId: Long, chatId: String) {
@@ -159,10 +207,47 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         }
     }
 
-    override fun onMessageReceived(event: MessageReceivedEvent?) {
+    override fun onTextMessageReceived(event: TextMessageReceivedEvent?) {
         println("received a message") // debug
         var entry = playlistSessions.map.entries.filter { e -> e.value.chatId.equals(event!!.chat.id) }
-                .firstOrNull() ?: return
+                .firstOrNull()
+
+        if (entry != null) {
+            processPlaylistMessage(event, entry)
+            return
+        }
+
+        if (userSearch.containsKey(event!!.message.sender.id)) {
+            processSearchSelection(event)
+            return
+        }
+
+        var query = event.content.content
+
+        if (query.startsWith("@YTDL_Bot")) { // group chats
+            query = query.replace("@YTDL_Bot ", "")
+        }
+
+        processInput(query,event.chat, event.message)
+    }
+
+    private fun processSearchSelection(event: TextMessageReceivedEvent) {
+        var userId = event.message.sender.id
+        var videos = userSearch[userId]
+        var selected = videos!!.filter { e -> e.title.equals(event.content.content) }.firstOrNull()
+
+        userSearch.remove(userId)
+
+        if (selected == null) {
+            event.chat.sendMessage("That selection was not an option!")
+            return
+        }
+
+        sendVideo(event.chat, "https://www.youtube.com/watch?v=${selected.videoId}", false, event.message)
+    }
+
+    private fun processPlaylistMessage(event: TextMessageReceivedEvent?,
+                                       entry: MutableMap.MutableEntry<Int, PlaylistSession>) {
         var session = entry.value
         var content = event!!.message.content
 
@@ -222,7 +307,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         callback.answer("Selecting...", false)
 
         if (data.startsWith("v.")) {
-            sendVideo(session.chat, "https://www.youtube.com/watch?v=${session.videoMatch}", true)
+            sendVideo(session.chat, "https://www.youtube.com/watch?v=${session.videoMatch}", true, session.originalMessage)
         } else {
             sendPlaylist(session.chat, "https://www.youtube.com/playlist?list=${session.playlistMatch}", null)
         }
@@ -285,17 +370,21 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         // TODO respond properly
     }
 
-    fun sendVideo(chat: Chat, link: String, linkSent: Boolean) {
+    fun sendVideo(chat: Chat, link: String, linkSent: Boolean, originalQuery: Message?) {
         chat.sendMessage("Downloading video and extracting audio (Depending on duration of video, this may take a while)")
         var regex = instance.videoRegex.matcher(link)
         regex.matches()
         var video = instance.downloadVideo(regex.group(1))
-
-        chat.sendMessage(SendableTextMessage.builder()
+        var md = SendableTextMessage.builder()
                 .message(descriptionFor(video, linkSent))
                 .parseMode(ParseMode.MARKDOWN)
-                .build())
-        chat.sendMessage(video.sendable())
+
+        if (originalQuery != null) {
+            md.replyTo(originalQuery)
+        }
+
+        var markup = chat.sendMessage(md.build())
+        chat.sendMessage(video.sendable().replyTo(markup).build())
         video.file.delete()
         File("${video.id}.info.json").delete()
     }
@@ -331,11 +420,11 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         chat.sendMessage("Finished processing! Sending ${playlist.videoList.size} videos...")
 
         for (video in playlist.videoList) {
-            chat.sendMessage(SendableTextMessage.builder()
+            var md = chat.sendMessage(SendableTextMessage.builder()
                     .message(descriptionFor(video, true))
                     .parseMode(ParseMode.MARKDOWN)
                     .build())
-            chat.sendMessage(video.sendable())
+            chat.sendMessage(video.sendable().replyTo(md).build())
         }
 
         chat.sendMessage("Finished sending playlist!")
@@ -361,7 +450,9 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 }
 
 private data class CommandSession(val videoMatch: String, val playlistMatch: String, val chat: Chat,
-                                  val userId: Long)
+                                  val userId: Long, val originalMessage: Message)
 
 private data class PlaylistSession(val chatId: String, val options: PlaylistOptions = PlaylistOptions(),
                                    val chat: Chat, val link: String, var selecting: String = "N/A")
+
+private data class CachedYoutubeVideo(val videoId: String, val title: String)

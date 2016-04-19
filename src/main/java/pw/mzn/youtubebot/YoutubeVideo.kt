@@ -32,13 +32,12 @@ data class YoutubeVideo(val id: String, val file: File, val owningPlaylist: Yout
         return this
     }
 
-    fun sendable(): SendableAudioMessage {
+    fun sendable(): SendableAudioMessage.SendableAudioMessageBuilder {
         return SendableAudioMessage.builder()
                 .audio(InputFile(file))
                 .title(metadata.name)
                 .performer(metadata.uploader)
                 .duration(metadata.duration)
-                .build()
     }
 }
 
