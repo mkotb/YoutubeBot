@@ -143,6 +143,8 @@ class PlaylistCallable(val options: PlaylistOptions, val id: String): Callable<Y
         }
 
         commandBuilder.add("https://www.youtube.com/playlist?list=$id")
+        
+        println(addSplit(commandBuilder, " ") + " is executing")
 
         ProcessBuilder().command(commandBuilder)
                 .directory(folder)
