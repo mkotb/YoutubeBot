@@ -58,7 +58,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         flushSessions(userId, chat.id)
 
         if (!matchesVideo && !matchesPlaylist) {
-            processSearch(chat, input, userId)
+            processSearch(chat, input, userId, message)
             return
         }
 
@@ -129,7 +129,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         }
     }
 
-    fun processSearch(chat: Chat, query: String, userId: Long) {
+    fun processSearch(chat: Chat, query: String, userId: Long, originalMessage: Message) {
         var response = instance.search(query)
 
         if (response.items == null || response.items.isEmpty()) {
@@ -160,6 +160,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         var message = SendableTextMessage.builder()
                 .message("Searched for $query, please select the one of the following")
                 .replyMarkup(keyboard.build())
+                .replyTo(originalMessage)
                 .build()
 
         chat.sendMessage(message)
