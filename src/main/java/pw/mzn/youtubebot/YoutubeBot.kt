@@ -8,6 +8,7 @@ import com.google.api.services.youtube.model.SearchListResponse
 import com.mashape.unirest.http.Unirest
 import pro.zackpollard.telegrambot.api.TelegramBot
 import java.io.File
+import java.io.InputStreamReader
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.Period
@@ -146,10 +147,15 @@ class PlaylistCallable(val options: PlaylistOptions, val id: String): Callable<Y
 
         println(addSplit(commandBuilder, " ") + " is executing")
 
-        ProcessBuilder().command(commandBuilder)
+        var process = ProcessBuilder().command(commandBuilder)
                 .directory(folder)
+                .redirectErrorStream(true)
                 .start()
-                .waitFor()
+
+        process.waitFor()
+        var reader = InputStreamReader(process.inputStream)
+        var lines = reader.readLines()
+        lines.forEach { e -> println(e) }
 
         // because I'm lazy
         var playlist = YoutubePlaylist(id)
