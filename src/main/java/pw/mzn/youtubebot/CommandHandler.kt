@@ -1,5 +1,7 @@
 package pw.mzn.youtubebot
 
+import com.google.common.cache.Cache
+import com.google.common.cache.CacheBuilder
 import pro.zackpollard.telegrambot.api.chat.CallbackQuery
 import pro.zackpollard.telegrambot.api.chat.Chat
 import pro.zackpollard.telegrambot.api.chat.message.Message
@@ -15,11 +17,16 @@ import java.io.File
 import java.text.NumberFormat
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 
 class CommandHandler(val instance: YoutubeBot): Listener {
     private val userSearch = ConcurrentHashMap<Long, List<CachedYoutubeVideo>>()
     private val inlineList = IdList<CommandSession>()
     private val playlistSessions = IdList<PlaylistSession>()
+    private val timeoutCache = CacheBuilder.newBuilder()
+            .concurrencyLevel(5)
+            .expireAfterWrite(10, TimeUnit.MINUTES)
+            .build<Long, Any?>()
 
     override fun onCommandMessageReceived(event: CommandMessageReceivedEvent?) {
         Thread() { processCommand(event) }.start()
@@ -29,6 +36,12 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         if ("download".equals(event!!.command)) {
             if (event.args.size < 1) {
                 event.chat.sendMessage("give me")
+                return
+            }
+
+            if (timeoutCache.asMap().containsKey(event.message.sender.id)) {
+                event.chat.sendMessage("I can only process one task at a time per user, sorry!\n" +
+                        "If your task is long, after 10 minutes from submission you are able to submit another task.")
                 return
             }
 
@@ -104,7 +117,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                 return
             }
 
-            sendVideo(chat, link, true, message)
+            sendVideo(chat, link, true, message, userId)
             return
         }
 
@@ -124,7 +137,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                 return
             }
 
-            sendPlaylist(chat, link, null)
+            sendPlaylist(chat, link, null, userId)
             return
         }
     }
@@ -241,7 +254,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             return
         }
 
-        sendVideo(event.chat, "https://www.youtube.com/watch?v=${selected.videoId}", false, event.message)
+        sendVideo(event.chat, "https://www.youtube.com/watch?v=${selected.videoId}", false, event.message, userId)
     }
 
     private fun processPlaylistMessage(event: TextMessageReceivedEvent?,
@@ -278,10 +291,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             }
 
             session.options.videoSelection = selection
-            sendPlaylist(session.chat, session.link, session.options)
+            sendPlaylist(session.chat, session.link, session.options, session.userId)
         } else if ("sh".equals(session.selecting)) {
             session.options.matchRegex = content.content
-            sendPlaylist(session.chat, session.link, session.options)
+            sendPlaylist(session.chat, session.link, session.options, session.userId)
         }
     }
 
@@ -305,9 +318,9 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         callback.answer("Selecting...", false)
 
         if (data.startsWith("v.")) {
-            sendVideo(session.chat, "https://www.youtube.com/watch?v=${session.videoMatch}", true, session.originalMessage)
+            sendVideo(session.chat, "https://www.youtube.com/watch?v=${session.videoMatch}", true, session.originalMessage, session.userId)
         } else {
-            sendPlaylist(session.chat, "https://www.youtube.com/playlist?list=${session.playlistMatch}", null)
+            sendPlaylist(session.chat, "https://www.youtube.com/playlist?list=${session.playlistMatch}", null, session.userId)
         }
 
         inlineList.remove(session)
@@ -333,7 +346,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         if ("av".equals(selection)) {
             callback.answer("Selecting...", false)
             session.options.allVideos = true
-            sendPlaylist(session.chat, session.link, session.options)
+            sendPlaylist(session.chat, session.link, session.options, session.userId)
         } else if ("sn".equals(selection)) {
             callback.answer("Please enter the numbers of the videos in the playlist you wish to select, separated by a space\n\n" +
                     "Such as: 1 4 6 7", false)
@@ -369,7 +382,8 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         // TODO respond properly
     }*/
 
-    fun sendVideo(chat: Chat, link: String, linkSent: Boolean, originalQuery: Message?) {
+    fun sendVideo(chat: Chat, link: String, linkSent: Boolean, originalQuery: Message?, userId: Long) {
+        timeoutCache.put(userId, null)
         var reply = SendableTextMessage.builder()
                 .message("Downloading video and extracting audio (Depending on duration of video, " +
                         "this may take a while)")
@@ -395,13 +409,14 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         var markup = chat.sendMessage(md.build())
         chat.sendMessage(video.sendable().replyTo(markup).build())
+        timeoutCache.invalidate(userId)
         video.file.delete()
         File("${video.id}.info.json").delete()
     }
 
-    fun sendPlaylist(chat: Chat, link: String, options: PlaylistOptions?) {
+    fun sendPlaylist(chat: Chat, link: String, options: PlaylistOptions?, userId: Long) {
         if (chat is Chat && options == null) {
-            var id = playlistSessions.add(PlaylistSession(chat.id, PlaylistOptions(), chat, link))
+            var id = playlistSessions.add(PlaylistSession(chat.id, PlaylistOptions(), chat, link, "N/A", userId))
             var selectionKeyboard = InlineKeyboardMarkup.builder()
                     .addRow(InlineKeyboardButton.builder().text("Selection").callbackData("pl.sn.$id").build(),
                             InlineKeyboardButton.builder().text("Search").callbackData("pl.sh.$id").build())
@@ -422,6 +437,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             option = PlaylistOptions(true)
         }
 
+        timeoutCache.put(userId, null)
         chat.sendMessage(SendableTextMessage.builder()
                 .message("Downloading all videos and extracting their audio... This will take a while.")
                 .replyMarkup(ReplyKeyboardHide.builder().selective(true).build())
@@ -441,6 +457,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         }
 
         chat.sendMessage("Finished sending playlist!")
+        timeoutCache.invalidate(userId)
         playlist.folder.delete() // bye bye
         removePlaylistSession(chat.id)
     }
@@ -466,6 +483,7 @@ private data class CommandSession(val videoMatch: String, val playlistMatch: Str
                                   val userId: Long, val originalMessage: Message)
 
 private data class PlaylistSession(val chatId: String, val options: PlaylistOptions = PlaylistOptions(),
-                                   val chat: Chat, val link: String, var selecting: String = "N/A")
+                                   val chat: Chat, val link: String, var selecting: String = "N/A",
+                                   val userId: Long)
 
 private data class CachedYoutubeVideo(val videoId: String, val title: String)
