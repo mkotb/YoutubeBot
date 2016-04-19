@@ -99,8 +99,8 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                 return
             }
 
-            if (instance.parse8601Duration(response.items[0].contentDetails.duration) > 14400L) {
-                chat.sendMessage("This bot is unable to process videos longer than 4 hours! Sorry!")
+            if (instance.parse8601Duration(response.items[0].contentDetails.duration) > 3600L) {
+                chat.sendMessage("This bot is unable to process videos longer than 1 hour! Sorry!")
                 return
             }
 
@@ -158,7 +158,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         userSearch.put(userId, cachedVids)
         var message = SendableTextMessage.builder()
-                .message("Searched for $query, please select the one of the following")
+                .message("Please select the one of the following")
                 .replyMarkup(keyboard.build())
                 .replyTo(originalMessage)
                 .build()
