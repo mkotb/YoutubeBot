@@ -15,10 +15,7 @@ import pro.zackpollard.telegrambot.api.event.chat.inline.InlineCallbackQueryRece
 import pro.zackpollard.telegrambot.api.event.chat.inline.InlineQueryReceivedEvent
 import pro.zackpollard.telegrambot.api.event.chat.message.CommandMessageReceivedEvent
 import pro.zackpollard.telegrambot.api.event.chat.message.TextMessageReceivedEvent
-import pro.zackpollard.telegrambot.api.keyboards.InlineKeyboardButton
-import pro.zackpollard.telegrambot.api.keyboards.InlineKeyboardMarkup
-import pro.zackpollard.telegrambot.api.keyboards.KeyboardButton
-import pro.zackpollard.telegrambot.api.keyboards.ReplyKeyboardMarkup
+import pro.zackpollard.telegrambot.api.keyboards.*
 import java.io.File
 import java.net.URL
 import java.text.NumberFormat
@@ -157,9 +154,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         for (i in 0..max) {
             var entry = response.items[i]
+            var title = entry.snippet.title + " by ${entry.snippet.channelTitle}"
 
-            cachedVids.add(CachedYoutubeVideo(entry.id.videoId, entry.snippet.title))
-            keyboard.addRow(KeyboardButton.builder().text(entry.snippet.title).build())
+            cachedVids.add(CachedYoutubeVideo(entry.id.videoId, title))
+            keyboard.addRow(KeyboardButton.builder().text(title).build())
         }
 
         userSearch.put(userId, cachedVids)
@@ -412,7 +410,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             option = PlaylistOptions(true)
         }
 
-        chat.sendMessage("Downloading all videos and extracting their audio... This will take a while.")
+        chat.sendMessage(SendableTextMessage.builder()
+                .message("Downloading all videos and extracting their audio... This will take a while.")
+                .replyMarkup(ReplyKeyboardHide.builder().build())
+                .build())
         var regex = instance.playlistRegex.matcher(link)
         regex.matches()
         var playlist = instance.downloadPlaylist(option, regex.group(regex.groupCount()))
