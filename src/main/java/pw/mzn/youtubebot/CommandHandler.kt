@@ -2,22 +2,16 @@ package pw.mzn.youtubebot
 
 import pro.zackpollard.telegrambot.api.chat.CallbackQuery
 import pro.zackpollard.telegrambot.api.chat.Chat
-import pro.zackpollard.telegrambot.api.chat.inline.send.InlineQueryResponse
-import pro.zackpollard.telegrambot.api.chat.inline.send.results.InlineQueryResult
-import pro.zackpollard.telegrambot.api.chat.inline.send.results.InlineQueryResultArticle
 import pro.zackpollard.telegrambot.api.chat.message.Message
 import pro.zackpollard.telegrambot.api.chat.message.content.TextContent
 import pro.zackpollard.telegrambot.api.chat.message.send.ParseMode
 import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage
 import pro.zackpollard.telegrambot.api.event.Listener
 import pro.zackpollard.telegrambot.api.event.chat.CallbackQueryReceivedEvent
-import pro.zackpollard.telegrambot.api.event.chat.inline.InlineCallbackQueryReceivedEvent
-import pro.zackpollard.telegrambot.api.event.chat.inline.InlineQueryReceivedEvent
 import pro.zackpollard.telegrambot.api.event.chat.message.CommandMessageReceivedEvent
 import pro.zackpollard.telegrambot.api.event.chat.message.TextMessageReceivedEvent
 import pro.zackpollard.telegrambot.api.keyboards.*
 import java.io.File
-import java.net.URL
 import java.text.NumberFormat
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -43,10 +37,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         }
 
          if ("start".equals(event.command)) {
-             event.chat.sendMessage("Hi! Welcome to the YouTube Downloader Bot, thanks for checking it out!" +
-                     "The premise of this bot is simple; you give it a video, it sends you it's audio." +
+             event.chat.sendMessage("Hi! Welcome to the YouTube Downloader Bot, thanks for checking it out! " +
+                     "The premise of this bot is simple; you give it a video, it sends you it's audio.\n" +
                      "You can throw at it links from YouTube, or give it a search query such as " +
-                     "\"Stressed Out Tomize Remix\" and it'll respond to you as soon as it can. It also works " +
+                     "\"Stressed Out Tomize Remix\" and it'll respond to you as soon as it can.\n It also works " +
                      "with playlists! You can make the bot download your favourite podcasts on YouTube or your " +
                      "favourite songs. Give it a try, send any query!")
              return
@@ -239,7 +233,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         userSearch.remove(userId)
 
         if (selected == null) {
-            event.chat.sendMessage("That selection was not an option!")
+            event.chat.sendMessage(SendableTextMessage.builder()
+                    .message("That selection was not an option!")
+                    .replyMarkup(ReplyKeyboardHide.builder().selective(true).build())
+                    .replyTo(event.message).build())
             return
         }
 
@@ -348,7 +345,8 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         // sn & sh move their next data processing to onMessageReceived
     }
 
-    override fun onInlineQueryReceived(event: InlineQueryReceivedEvent?) {
+    // disable until viable method of this working is found
+    /*override fun onInlineQueryReceived(event: InlineQueryReceivedEvent?) {
         var query = event!!.query
         var response = instance.search(query.query)
         var videos = ArrayList<InlineQueryResult>(response.size)
@@ -368,10 +366,21 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         var query = event!!.callbackQuery
 
         // TODO respond properly
-    }
+    }*/
 
     fun sendVideo(chat: Chat, link: String, linkSent: Boolean, originalQuery: Message?) {
-        chat.sendMessage("Downloading video and extracting audio (Depending on duration of video, this may take a while)")
+        var reply = SendableTextMessage.builder()
+                .message("Downloading video and extracting audio (Depending on duration of video, " +
+                        "this may take a while)")
+        var hide = ReplyKeyboardHide.builder()
+
+        if (originalQuery != null) {
+            hide.selective(true)
+            reply.replyTo(originalQuery)
+        }
+
+        reply.replyMarkup(hide.build())
+        chat.sendMessage(reply.build())
         var regex = instance.videoRegex.matcher(link)
         regex.matches()
         var video = instance.downloadVideo(regex.group(1))
