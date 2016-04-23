@@ -462,16 +462,19 @@ class CommandHandler(val instance: YoutubeBot): Listener {
     fun sendPlaylist(chat: Chat, link: String, options: PlaylistOptions?, userId: Long, itemCount: Long) {
         if (chat is Chat && options == null) {
             var id = playlistSessions.add(PlaylistSession(chat.id, PlaylistOptions(), chat, link, "N/A", userId, itemCount))
+            var message = "How would you like to select the videos from this playlist?"
             var selectionKeyboard = InlineKeyboardMarkup.builder()
                     .addRow(InlineKeyboardButton.builder().text("Selection").callbackData("pl.sn.$id").build(),
                             InlineKeyboardButton.builder().text("Search").callbackData("pl.sh.$id").build())
 
             if (itemCount <= 50) {
                 selectionKeyboard.addRow(InlineKeyboardButton.builder().text("All Videos").callbackData("pl.av.$id").build())
+            } else {
+                message += " Also note that you cannot select all the videos at this time because your playlist is greater than 50 videos long"
             }
 
             var response = SendableTextMessage.builder()
-                    .message("How would you like to select the videos from this playlist?")
+                    .message(message)
                     .replyMarkup(selectionKeyboard.build())
                     .build()
 
