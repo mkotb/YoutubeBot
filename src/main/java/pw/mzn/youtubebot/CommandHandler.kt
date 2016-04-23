@@ -1,6 +1,5 @@
 package pw.mzn.youtubebot
 
-import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import pro.zackpollard.telegrambot.api.chat.CallbackQuery
 import pro.zackpollard.telegrambot.api.chat.Chat
@@ -23,6 +22,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
     private val userSearch = ConcurrentHashMap<Long, List<CachedYoutubeVideo>>()
     private val inlineList = IdList<CommandSession>()
     private val playlistSessions = IdList<PlaylistSession>()
+    private val videoSessions = IdList<VideoSession>()
     private val timeoutCache = CacheBuilder.newBuilder()
             .concurrencyLevel(5)
             .expireAfterWrite(10, TimeUnit.MINUTES)
@@ -76,28 +76,28 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         }
 
         if (matchesVideo && matchesPlaylist) {
-            var validVideo = preconditionVideo(link, chat, true)
+            var videoDuration = preconditionVideo(link, chat, true)
             var playlistVideoCount = preconditionPlaylist(link, chat, true)
 
-            if (!validVideo && playlistVideoCount == -1L) {
+            if (videoDuration == -1L && playlistVideoCount == -1L) {
                 chat.sendMessage("Neither the playlist nor the video in that link could be found!")
                 return
             }
 
-            if (validVideo && playlistVideoCount == -1L) {
+            if (videoDuration != -1L && playlistVideoCount == -1L) {
                 matchesPlaylist = false
             }
 
-            if (!validVideo && playlistVideoCount != -1L) {
+            if (videoDuration == -1L && playlistVideoCount != -1L) {
                 matchesVideo = false
             }
 
-            if (validVideo && playlistVideoCount != -1L) {
+            if (videoDuration != -1L && playlistVideoCount != -1L) {
                 var videoMatch = videoMatcher.group(1)
                 playlistMatcher = instance.playlistRegex.matcher(link)
                 playlistMatcher.lookingAt()
                 var sessionId = inlineList.add(CommandSession(videoMatch, playlistMatcher.group(2), chat,
-                        userId, message, playlistVideoCount))
+                        userId, message, playlistVideoCount, videoDuration))
 
                 val selectionKeyboard = InlineKeyboardMarkup.builder()
                         .addRow(InlineKeyboardButton.builder().text("Playlist").callbackData("p.$sessionId").build(),
@@ -116,8 +116,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         if (matchesVideo) {
             // check video length
-            if (preconditionVideo(link, chat, false)) {
-                sendVideo(chat, link, true, message, userId)
+            var duration = preconditionVideo(link, chat, false)
+
+            if (duration != -1L) {
+                sendVideo(chat, link, true, message, userId, null, duration)
             }
 
             return
@@ -156,7 +158,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         return response.items[0].contentDetails.itemCount
     }
 
-    fun preconditionVideo(link: String, chat: Chat, silent: Boolean): Boolean {
+    fun preconditionVideo(link: String, chat: Chat, silent: Boolean): Long {
         var search = instance.youtube.videos().list("contentDetails")
         var regex = instance.videoRegex.matcher(link)
         regex.lookingAt()
@@ -170,17 +172,19 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             if (!silent) {
                 chat.sendMessage("Unable to find any Youtube video by that ID!")
             }
-            return false
+            return -1L
         }
 
-        if (instance.parse8601Duration(response.items[0].contentDetails.duration) > 3600L) {
+        var duration = instance.parse8601Duration(response.items[0].contentDetails.duration)
+
+        if (duration > 3600L) {
             if (!silent) {
                 chat.sendMessage("This bot is unable to process videos longer than 1 hour! Sorry!")
             }
-            return false
+            return -1L
         }
 
-        return true
+        return duration
     }
 
     fun processSearch(chat: Chat, query: String, userId: Long, originalMessage: Message) {
@@ -254,15 +258,27 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             processPlaylistInline(callback, data)
             return
         }
+
+        if (data.startsWith("vd.")) {
+            processVideoInline(callback, data)
+            return
+        }
     }
 
     override fun onTextMessageReceived(event: TextMessageReceivedEvent?) {
         println("received a message") // debug
-        var entry = playlistSessions.map.entries.filter { e -> e.value.chatId.equals(event!!.chat.id) }
+        var playlistEntry = playlistSessions.map.entries.filter { e -> e.value.chatId.equals(event!!.chat.id) }
+                .firstOrNull()
+        var videoEntry = videoSessions.map.entries.filter { e -> e.value.chatId.equals(event!!.chat.id) }
                 .firstOrNull()
 
-        if (entry != null) {
-            processPlaylistMessage(event, entry)
+        if (playlistEntry != null) {
+            processPlaylistMessage(event, playlistEntry)
+            return
+        }
+
+        if (videoEntry != null) {
+            processVideoMessage(event, videoEntry)
             return
         }
 
@@ -295,7 +311,14 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             return
         }
 
-        sendVideo(event.chat, "https://www.youtube.com/watch?v=${selected.videoId}", false, event.message, userId)
+        var link = "https://www.youtube.com/watch?v=${selected.videoId}"
+        var duration = preconditionVideo(link, event.chat, false)
+
+        if (duration == -1L) {
+            return
+        }
+
+        sendVideo(event.chat, link, false, event.message, userId, null, duration)
     }
 
     private fun processPlaylistMessage(event: TextMessageReceivedEvent?,
@@ -343,17 +366,94 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         }
     }
 
-    fun processSelectionInline(callback: CallbackQuery, data: String) {
-        var sessionId: Int
+    private fun processVideoMessage(event: TextMessageReceivedEvent?,
+                                    entry: MutableMap.MutableEntry<Int, VideoSession>) {
+        var session = entry.value
+        var content = event!!.message.content
 
-        try {
-            sessionId = data.split(".")[1].toInt()
-        } catch (ignored: Exception) {
-            println("not an int after . $data")
-            return // r00d for returning bad data
+        if (content !is TextContent) {
+            return
         }
 
-        var session = inlineList.get(sessionId) ?: return // stop returning bad data
+        var message = content.content
+        var selecting = session.selecting
+
+        if ("N/A".equals(selecting)) {
+            return
+        }
+
+        if (selecting.endsWith("t")) {
+            var timestamp = instance.parseDuration(message)
+
+            if (selecting.startsWith("s")) {
+                var high = (session.options.endTime - 2)
+
+                if (timestamp > high) {
+                    timestamp = high
+                }
+
+                session.options.startTime = timestamp
+            } else if (selecting.startsWith("e")) {
+                if (timestamp == 0L) {
+                    event.chat.sendMessage("Please enter a valid time!")
+                    return
+                }
+
+                var low = (session.options.startTime + 2)
+
+                if (timestamp < low) {
+                    timestamp = low
+                }
+
+                session.options.endTime = timestamp
+            }
+        } else if ("s".equals(selecting)) {
+            var speed: Double
+
+            try {
+                speed = message.toDouble()
+            } catch (e: Exception) {
+                event.chat.sendMessage("Please enter a valid number!")
+                return
+            }
+
+            if (speed < 0.5) {
+                speed = 0.5 // sorry not sorry
+            }
+
+            if (speed > 10.0) {
+                speed = 10.0 // sorry not sorry
+            }
+
+            session.options.speed = speed
+        }
+
+        session.selecting = "N/A" // reset
+        event.chat.sendMessage(SendableTextMessage.builder()
+                .message("Wonderful! What would you like to do next?")
+                .replyMarkup(videoKeyboardFor(entry.key))
+                .build()) // back to processVideoInline()
+    }
+
+    fun <T> fetchSession(data: String, index: Int, minSize: Int, list: IdList<T>): T? {
+        var sessionId: Int
+
+        if (data.split(".").size < minSize) {
+            return null
+        }
+
+        try {
+            sessionId = data.split(".")[index].toInt()
+        } catch (ignored: Exception) {
+            println("not an int after . $data")
+            return null // r00d for returning bad data
+        }
+
+        return list.get(sessionId)
+    }
+
+    fun processSelectionInline(callback: CallbackQuery, data: String) {
+        var session = fetchSession(data, 1, 2, inlineList) ?: return // stop returning bad data
 
         if (session.userId != callback.from.id) {
             println("session which belongs to ${session.userId} doesn't match sender ${callback.from.id}")
@@ -363,7 +463,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         callback.answer("Selecting...", false)
 
         if (data.startsWith("v.")) {
-            sendVideo(session.chat, "https://www.youtube.com/watch?v=${session.videoMatch}", true, session.originalMessage, session.userId)
+            sendVideo(session.chat, "https://www.youtube.com/watch?v=${session.videoMatch}", true, session.originalMessage, session.userId, null, session.duration)
         } else {
             sendPlaylist(session.chat, "https://www.youtube.com/playlist?list=${session.playlistMatch}", null, session.userId, session.playlistVideos)
         }
@@ -371,21 +471,34 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         inlineList.remove(session)
     }
 
-    fun processPlaylistInline(callback: CallbackQuery, data: String) {
-        var sessionId: Int
+    fun processVideoInline(callback: CallbackQuery, data: String) {
+        var session = fetchSession(data, 2, 3, videoSessions) ?: return // stop returning bad data
+        var selection = data.split(".")[1]
 
-        if (data.split(".").size < 3) {
+        if ("p".equals(selection)) { // exit route
+            callback.answer("Sending to processing queue...", false)
+            sendVideo(session.chat, session.link, session.linkSent, session.originalQuery, session.userId, session.options, session.duration)
             return
         }
 
-        try {
-            sessionId = data.split(".")[2].toInt()
-        } catch (ignored: Exception) {
-            println("not an int after second . $data")
-            return // r00d for returning bad data
+        // all steps below go to processVideoMessage
+
+        if ("st".equals(selection)) {
+            callback.answer("Please enter the start time.\nExample: 3:15 for 3 minutes and 15 minutes in", false)
+        } else if ("et".equals(selection)) {
+            callback.answer("Please enter the end time.\nExample: 3:15 for 3 minutes and 15 minutes in", false)
+        } else if ("s".equals(selection)) {
+            callback.answer("Please enter the speed.\nExample: 2.5 for 2.5 times the speed", false)
+        } else {
+            callback.answer("no", true)
+            return
         }
 
-        var session = playlistSessions.get(sessionId) ?: return // stop returning bad data
+        session.selecting = selection
+    }
+
+    fun processPlaylistInline(callback: CallbackQuery, data: String) {
+        var session = fetchSession(data, 2, 3, playlistSessions) ?: return // stop returning bad data
         var selection = data.split(".")[1]
 
         if ("av".equals(selection)) {
@@ -401,7 +514,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             session.selecting = selection
         }
 
-        // sn & sh move their next data processing to onMessageReceived
+        // sn & sh move their next data processing to processPlaylistMessage
     }
 
     // disable until viable method of this working is found
@@ -427,7 +540,36 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         // TODO respond properly
     }*/
 
-    fun sendVideo(chat: Chat, link: String, linkSent: Boolean, originalQuery: Message?, userId: Long) {
+    private fun videoKeyboardFor(id: Int): InlineKeyboard {
+        var session = videoSessions.get(id) ?: return InlineKeyboardMarkup.builder().build()
+
+        return InlineKeyboardMarkup.builder()
+                .addRow(InlineKeyboardButton.builder().text("Start Time ${instance.formatTime(session.options.startTime)}")
+                                            .callbackData("vd.st.$id").build(),
+                        InlineKeyboardButton.builder().text("End Time ${instance.formatTime(session.options.endTime)}")
+                                             .callbackData("vd.et.$id").build())
+                .addRow(InlineKeyboardButton.builder().text("Speed ${session.options.speed}x")
+                                             .callbackData("vd.s.$id").build())
+                .addRow(InlineKeyboardButton.builder().text("Send to Processing...")
+                                             .callbackData("vd.p.$id").build())
+                .build()
+    }
+
+    fun sendVideo(chat: Chat, link: String, linkSent: Boolean, originalQuery: Message?, userId: Long,
+                  optionz: VideoOptions?, duration: Long) {
+        if (chat is Chat && optionz == null) {
+            var id = videoSessions.add(VideoSession(chat.id, link, VideoOptions(0, duration), chat, linkSent, userId, originalQuery, duration))
+            var response = SendableTextMessage.builder()
+                    .message("How would you like to customize your video?")
+                    .replyMarkup(videoKeyboardFor(id))
+                    .build()
+
+            chat.sendMessage(response) // next step is processVideoInline()
+            return
+        }
+
+        var options = optionz ?: VideoOptions()
+
         timeoutCache.put(userId, Object())
         var reply = SendableTextMessage.builder()
                 .message("Downloading video and extracting audio (Depending on duration of video, " +
@@ -443,7 +585,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         chat.sendMessage(reply.build())
         var regex = instance.videoRegex.matcher(link)
         regex.matches()
-        var video = instance.downloadVideo(regex.group(1))
+        var video = instance.downloadVideo(options, regex.group(1))
         var md = SendableTextMessage.builder()
                 .message(descriptionFor(video, linkSent))
                 .parseMode(ParseMode.MARKDOWN)
@@ -537,10 +679,15 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 }
 
 private data class CommandSession(val videoMatch: String, val playlistMatch: String, val chat: Chat,
-                                  val userId: Long, val originalMessage: Message, val playlistVideos: Long)
+                                  val userId: Long, val originalMessage: Message, val playlistVideos: Long,
+                                  val duration: Long)
 
 private data class PlaylistSession(val chatId: String, val options: PlaylistOptions = PlaylistOptions(),
                                    val chat: Chat, val link: String, var selecting: String = "N/A",
                                    val userId: Long, val videoCount: Long)
+
+private data class VideoSession(val chatId: String, val link: String, val options: VideoOptions = VideoOptions(),
+                                val chat: Chat, val linkSent: Boolean, val userId: Long,
+                                val originalQuery: Message?, val duration: Long, var selecting: String = "N/A")
 
 private data class CachedYoutubeVideo(val videoId: String, val title: String)

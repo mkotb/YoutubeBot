@@ -15,6 +15,7 @@ import java.time.Period
 import java.util.*
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
 import kotlin.properties.Delegates
 import kotlin.system.exitProcess
@@ -72,12 +73,12 @@ class YoutubeBot(val key: String, val youtubeKey: String) {
         return search.execute()
     }
 
-    fun downloadVideo(id: String): YoutubeVideo {
-        return executor.submit(VideoCallable(id)).get()
+    fun downloadVideo(options: VideoOptions, id: String): YoutubeVideo {
+        return executor.submit(VideoCallable(id, options, this)).get()
     }
 
     fun downloadPlaylist(options: PlaylistOptions, id: String): YoutubePlaylist {
-        return executor.submit(PlaylistCallable(options, id)).get()
+        return executor.submit(PlaylistCallable(options, id, this)).get()
     }
 
     fun parse8601Duration(i: String): Long {
@@ -104,14 +105,96 @@ class YoutubeBot(val key: String, val youtubeKey: String) {
 
         return days * 86400 + seconds
     }
+
+    fun addSplit(list: List<Any>, splitter: String): String {
+        var builder = StringBuilder()
+
+        list.forEach { e -> builder.append(e.toString()).append(splitter) }
+        var str = builder.toString()
+
+        return str.substring(0, str.length - 1)
+    }
+
+    fun formatTime(time: Long): String {
+        var hours = TimeUnit.SECONDS.toHours(time)
+        var minutes = TimeUnit.SECONDS.toMinutes(time) - (hours * 60)
+        var seconds = time - (hours * 3600) - (minutes * 60)
+
+        return String.format("%02d:%02d:%02d", hours, minutes, seconds)
+    }
+
+    fun parseDuration(inp: String): Long {
+        var times = arrayOf(TimeUnit.HOURS, TimeUnit.MINUTES, TimeUnit.SECONDS)
+        var input = inp.split(":")
+        var top = input.size
+        var time = 0L
+
+        if (top > 3) {
+            top = 3
+        }
+
+        for (i in 0..top) {
+            var unit = times[i]
+            var parsed: Long
+
+            try {
+                parsed = input[i].toInt().toLong()
+            } catch (ignored: Exception) {
+                continue
+            }
+
+            time += unit.toSeconds(parsed)
+        }
+
+        return time
+    }
 }
 
-class VideoCallable(val id: String): Callable<YoutubeVideo> {
+class VideoCallable(val id: String, val options: VideoOptions, val instance: YoutubeBot): Callable<YoutubeVideo> {
     override fun call(): YoutubeVideo {
         println("Downloading $id...")
-        ProcessBuilder().command("./youtube-dl", "--write-info-json",
-                "--id", "-x", "--audio-format", "mp3", "--audio-quality", "0",
-                "https://www.youtube.com/watch?v=$id")
+        var commandBuilder = LinkedList<String>(Arrays.asList("./../youtube-dl", "--yes-playlist",
+                "--write-info-json", "--id", "--audio-format", "mp3", "--audio-quality", "0", "-x"))
+        var postProcessArgs = LinkedList<String>()
+
+        if (options.crop) {
+            postProcessArgs.add("-ss ${options.startTime} -to ${options.endTime}")
+        }
+
+        if (options.speed != 1.0) {
+            if (options.speed < 0.5) {
+                postProcessArgs.add("-filter:a \"atempo=0.5\"") // i'm sorry but dat is too slow
+            } else if (options.speed > 2.0) { // GOOTTTAAA GOOO FASSTT
+                postProcessArgs.add("-filter:a \"")
+
+                var iterations = Math.floor(options.speed / 2.0).toInt()
+                var extra = options.speed % 2.0
+
+                for (i in 0..(iterations - 1)) {
+                    postProcessArgs.add("atempo=2.0,")
+                }
+
+                postProcessArgs.add("atempo=2.0")
+
+                if (extra != 0.0) {
+                    postProcessArgs.add(",atempo=$extra\"")
+                } else {
+                    postProcessArgs.add("\"")
+                }
+            } else {
+                postProcessArgs.add("-filter:a \"atempo=${options.speed}\"")
+            }
+        }
+
+        if (!postProcessArgs.isEmpty()) {
+            commandBuilder.add("--postprocessor-args")
+            commandBuilder.add("\'${instance.addSplit(postProcessArgs, " ").replace("'", "\'")}'")
+        }
+
+        commandBuilder.add("https://www.youtube.com/watch?v=$id")
+        println(instance.addSplit(commandBuilder, " ") + " is executing")
+
+        ProcessBuilder().command(commandBuilder)
                 .start()
                 .waitFor()
         println("Finished downloading $id!")
@@ -120,7 +203,7 @@ class VideoCallable(val id: String): Callable<YoutubeVideo> {
     }
 }
 
-class PlaylistCallable(val options: PlaylistOptions, val id: String): Callable<YoutubePlaylist> {
+class PlaylistCallable(val options: PlaylistOptions, val id: String, val instance: YoutubeBot): Callable<YoutubePlaylist> {
     override fun call(): YoutubePlaylist {
         var folder = File(id)
 
@@ -140,12 +223,12 @@ class PlaylistCallable(val options: PlaylistOptions, val id: String): Callable<Y
 
         if (!options.allVideos && !options.videoSelection.isEmpty()) {
             commandBuilder.add("--playlist-items")
-            commandBuilder.add(addSplit(options.videoSelection, ","))
+            commandBuilder.add(instance.addSplit(options.videoSelection, ","))
         }
 
         commandBuilder.add("https://www.youtube.com/playlist?list=$id")
 
-        println(addSplit(commandBuilder, " ") + " is executing")
+        println(instance.addSplit(commandBuilder, " ") + " is executing")
 
         ProcessBuilder().command(commandBuilder)
                 .directory(folder)
@@ -161,15 +244,6 @@ class PlaylistCallable(val options: PlaylistOptions, val id: String): Callable<Y
         }
 
         return playlist
-    }
-
-    private fun addSplit(list: List<Any>, splitter: String): String {
-        var builder = StringBuilder()
-
-        list.forEach { e -> builder.append(e.toString()).append(splitter) }
-        var str = builder.toString()
-
-        return str.substring(0, str.length - 1)
     }
 }
 
