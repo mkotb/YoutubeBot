@@ -407,6 +407,8 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
                 session.options.endTime = timestamp
             }
+
+            session.options.crop = true
         } else if ("s".equals(selecting)) {
             var speed: Double
 
