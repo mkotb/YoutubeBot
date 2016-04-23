@@ -316,6 +316,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             var numbers = content.content.split(" ")
 
             for(e in numbers) {
+                if (selection.size == 50) {
+                    break // no more than 50 selected videos
+                }
+
                 try {
                     var int = e.toInt()
 
@@ -461,11 +465,14 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             var selectionKeyboard = InlineKeyboardMarkup.builder()
                     .addRow(InlineKeyboardButton.builder().text("Selection").callbackData("pl.sn.$id").build(),
                             InlineKeyboardButton.builder().text("Search").callbackData("pl.sh.$id").build())
-                    .addRow(InlineKeyboardButton.builder().text("All Videos").callbackData("pl.av.$id").build())
-                    .build()
+
+            if (itemCount <= 50) {
+                selectionKeyboard.addRow(InlineKeyboardButton.builder().text("All Videos").callbackData("pl.av.$id").build())
+            }
+
             var response = SendableTextMessage.builder()
                     .message("How would you like to select the videos from this playlist?")
-                    .replyMarkup(selectionKeyboard)
+                    .replyMarkup(selectionKeyboard.build())
                     .build()
 
             chat.sendMessage(response) // next process of new data is in processPlaylistInline()
