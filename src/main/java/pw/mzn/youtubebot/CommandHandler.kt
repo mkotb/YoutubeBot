@@ -428,11 +428,8 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             session.options.speed = speed
         }
 
-        session.selecting = "N/A" // reset
-        event.chat.sendMessage(SendableTextMessage.builder()
-                .message("Wonderful! What would you like to do next?")
-                .replyMarkup(videoKeyboardFor(entry.key))
-                .build()) // back to processVideoInline()
+        session.selecting = "N/A" // reset back to processVideoInline()
+        instance.bot.editMessageReplyMarkup(session.chatId, session.botMessageId, videoKeyboardFor(entry.key))
     }
 
     fun <T> fetchSession(data: String, index: Int, minSize: Int, list: IdList<T>): T? {
@@ -564,7 +561,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                     .replyMarkup(videoKeyboardFor(id))
                     .build()
 
-            chat.sendMessage(response) // next step is processVideoInline()
+            videoSessions.get(id)!!.botMessageId = chat.sendMessage(response).messageId // next step is processVideoInline()
             return
         }
 
@@ -688,6 +685,7 @@ private data class PlaylistSession(val chatId: String, val options: PlaylistOpti
 
 private data class VideoSession(val chatId: String, val link: String, val options: VideoOptions = VideoOptions(),
                                 val chat: Chat, val linkSent: Boolean, val userId: Long,
-                                val originalQuery: Message?, val duration: Long, var selecting: String = "N/A")
+                                val originalQuery: Message?, val duration: Long, var selecting: String = "N/A",
+                                var botMessageId: Long = -1L)
 
 private data class CachedYoutubeVideo(val videoId: String, val title: String)
