@@ -157,7 +157,7 @@ class YoutubeBot(val key: String, val youtubeKey: String) {
 class VideoCallable(val id: String, val options: VideoOptions, val instance: YoutubeBot): Callable<YoutubeVideo> {
     override fun call(): YoutubeVideo {
         println("Downloading $id...")
-        var commandBuilder = LinkedList<String>(Arrays.asList("./../youtube-dl", "--yes-playlist",
+        var commandBuilder = LinkedList<String>(Arrays.asList("./youtube-dl", "--yes-playlist",
                 "--write-info-json", "--id", "--audio-format", "mp3", "--audio-quality", "0", "-x"))
         var postProcessArgs = LinkedList<String>()
 
