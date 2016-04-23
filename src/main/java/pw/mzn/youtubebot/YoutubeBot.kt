@@ -201,9 +201,12 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
         commandBuilder.add("https://www.youtube.com/watch?v=$id")
         println(instance.addSplit(commandBuilder, " ") + " is executing")
 
-        ProcessBuilder().command(commandBuilder)
+        var process = ProcessBuilder().command(commandBuilder)
+                .redirectErrorStream(true)
                 .start()
-                .waitFor()
+
+        process.waitFor()
+        InputStreamReader(process.inputStream).readLines().forEach { e -> println(e) }
         println("Finished downloading $id!")
 
         return YoutubeVideo(id, File("$id.mp3")).fetchMetadata()
