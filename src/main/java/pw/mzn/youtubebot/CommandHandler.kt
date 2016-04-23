@@ -498,7 +498,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         if (option.allVideos && itemCount > 10) {
             option.allVideos = false
-            option.videoSelection = IntRange(0, itemCount.toInt()).toMutableList()
+            option.videoSelection = IntRange(1, itemCount.toInt()).toMutableList()
         }
 
         var playlist = instance.downloadPlaylist(option, regex.group(regex.groupCount()))
