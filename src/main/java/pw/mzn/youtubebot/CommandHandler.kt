@@ -139,7 +139,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
     fun preconditionPlaylist(link: String, chat: Chat, silent: Boolean): Long {
         var search = instance.youtube.playlists().list("id,contentDetails")
         var regex = instance.playlistRegex.matcher(link)
-        regex.matches()
+        regex.lookingAt()
 
         search.id = regex.group(regex.groupCount())
         search.fields = "items(id, contentDetails/itemCount)"
@@ -159,7 +159,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
     fun preconditionVideo(link: String, chat: Chat, silent: Boolean): Boolean {
         var search = instance.youtube.videos().list("contentDetails")
         var regex = instance.videoRegex.matcher(link)
-        regex.matches()
+        regex.lookingAt()
 
         search.id = regex.group(1)
         search.fields = "items(contentDetails/duration)"
