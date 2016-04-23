@@ -225,8 +225,15 @@ class CommandHandler(val instance: YoutubeBot): Listener {
     }
 
     fun flushSessions(userId: Long, chatId: String) {
+        removeVideoSession(chatId)
         removePlaylistSession(chatId)
         removeInlineSession(userId)
+    }
+
+    fun removeVideoSession(chatId: String) {
+        var videoSession = videoSessions.map.entries.filter { e -> e.value.chatId.equals(chatId) }
+                .firstOrNull() ?: return
+        videoSessions.remove(videoSession.value)
     }
 
     fun removePlaylistSession(chatId: String) {
@@ -598,6 +605,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         timeoutCache.invalidate(userId)
         video.file.delete()
         File("${video.id}.info.json").delete()
+        removePlaylistSession(chat.id)
     }
 
     fun sendPlaylist(chat: Chat, link: String, options: PlaylistOptions?, userId: Long, itemCount: Long) {
