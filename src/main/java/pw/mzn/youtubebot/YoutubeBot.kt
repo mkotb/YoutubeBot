@@ -169,22 +169,25 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
             if (options.speed < 0.5) {
                 postProcessArgs.add("-filter:a \"atempo=0.5\"") // i'm sorry but dat is too slow
             } else if (options.speed > 2.0) { // GOOTTTAAA GOOO FASSTT
-                postProcessArgs.add("-filter:a \"")
+                var builder = StringBuilder()
+                builder.append("-filter:a \"")
 
                 var iterations = Math.floor(options.speed / 2.0).toInt()
                 var extra = options.speed % 2.0
 
-                for (i in 0..(iterations - 1)) {
-                    postProcessArgs.add("atempo=2.0,")
+                for (i in 0..(iterations - 2)) {
+                    builder.append("atempo=2.0,")
                 }
 
-                postProcessArgs.add("atempo=2.0")
+                builder.append("atempo=2.0")
 
                 if (extra != 0.0) {
-                    postProcessArgs.add(",atempo=$extra\"")
+                    builder.append(",atempo=$extra\"")
                 } else {
-                    postProcessArgs.add("\"")
+                    builder.append("\"")
                 }
+
+                postProcessArgs.add(builder.toString())
             } else {
                 postProcessArgs.add("-filter:a \"atempo=${options.speed}\"")
             }
