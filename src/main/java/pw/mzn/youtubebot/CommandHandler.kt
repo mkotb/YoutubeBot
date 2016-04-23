@@ -76,70 +76,111 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         }
 
         if (matchesVideo && matchesPlaylist) {
-            var videoMatch = videoMatcher.group(1)
-            playlistMatcher = instance.playlistRegex.matcher(link)
-            playlistMatcher.lookingAt()
-            var sessionId = inlineList.add(CommandSession(videoMatch, playlistMatcher.group(2), chat,
-                    userId, message))
+            var validVideo = preconditionVideo(link, chat, true)
+            var playlistVideoCount = preconditionPlaylist(link, chat, true)
 
-            val selectionKeyboard = InlineKeyboardMarkup.builder()
-                    .addRow(InlineKeyboardButton.builder().text("Playlist").callbackData("p.$sessionId").build(),
-                            InlineKeyboardButton.builder().text("Video").callbackData("v.$sessionId").build())
-                    .build()
-            var response = SendableTextMessage.builder()
-                    .message("That link matches both a playlist and a video, which of those would you" +
-                            " like to download?")
-                    .replyMarkup(selectionKeyboard)
-                    .build()
+            if (!validVideo && playlistVideoCount == -1L) {
+                chat.sendMessage("Neither the playlist nor the video in that link could be found!")
+                return
+            }
 
-            chat.sendMessage(response) // next process of new data is in processSelectionInline()
-            return
+            if (validVideo && playlistVideoCount == -1L) {
+                matchesPlaylist = false
+            }
+
+            if (!validVideo && playlistVideoCount != -1L) {
+                matchesVideo = false
+            }
+
+            if (validVideo && playlistVideoCount != -1L) {
+                var videoMatch = videoMatcher.group(1)
+                playlistMatcher = instance.playlistRegex.matcher(link)
+                playlistMatcher.lookingAt()
+                var sessionId = inlineList.add(CommandSession(videoMatch, playlistMatcher.group(2), chat,
+                        userId, message, playlistVideoCount))
+
+                val selectionKeyboard = InlineKeyboardMarkup.builder()
+                        .addRow(InlineKeyboardButton.builder().text("Playlist").callbackData("p.$sessionId").build(),
+                                InlineKeyboardButton.builder().text("Video").callbackData("v.$sessionId").build())
+                        .build()
+                var response = SendableTextMessage.builder()
+                        .message("That link matches both a playlist and a video, which of those would you" +
+                                " like to download?")
+                        .replyMarkup(selectionKeyboard)
+                        .build()
+
+                chat.sendMessage(response) // next process of new data is in processSelectionInline()
+                return
+            }
         }
 
         if (matchesVideo) {
             // check video length
-            var search = instance.youtube.videos().list("contentDetails")
-            var regex = instance.videoRegex.matcher(link)
-            regex.matches()
-
-            search.id = regex.group(1)
-            search.fields = "items(contentDetails/duration)"
-            search.key = instance.youtubeKey
-            var response = search.execute()
-
-            if (response.items.isEmpty()) {
-                chat.sendMessage("Unable to find any Youtube video by that ID!")
-                return
+            if (preconditionVideo(link, chat, false)) {
+                sendVideo(chat, link, true, message, userId)
             }
 
-            if (instance.parse8601Duration(response.items[0].contentDetails.duration) > 3600L) {
-                chat.sendMessage("This bot is unable to process videos longer than 1 hour! Sorry!")
-                return
-            }
-
-            sendVideo(chat, link, true, message, userId)
             return
         }
 
         if (matchesPlaylist) {
             // attempt to find said playlist
-            var search = instance.youtube.playlists().list("id")
-            var regex = instance.playlistRegex.matcher(link)
-            regex.matches()
+            var count = preconditionPlaylist(link, chat, false)
 
-            search.id = regex.group(regex.groupCount())
-            search.fields = "items(id)"
-            search.key = instance.youtubeKey
-            var response = search.execute()
-
-            if (response.items.isEmpty()) {
-                chat.sendMessage("Unable to find any playlists by that ID!")
+            if (count == -1L) {
                 return
             }
 
-            sendPlaylist(chat, link, null, userId)
+            sendPlaylist(chat, link, null, userId, count)
             return
         }
+    }
+
+    fun preconditionPlaylist(link: String, chat: Chat, silent: Boolean): Long {
+        var search = instance.youtube.playlists().list("id,contentDetails")
+        var regex = instance.playlistRegex.matcher(link)
+        regex.matches()
+
+        search.id = regex.group(regex.groupCount())
+        search.fields = "items(id, contentDetails/itemCount)"
+        search.key = instance.youtubeKey
+        var response = search.execute()
+
+        if (response.items.isEmpty()) {
+            if (!silent) {
+                chat.sendMessage("Unable to find any playlists by that ID!")
+            }
+            return -1
+        }
+
+        return response.items[0].contentDetails.itemCount
+    }
+
+    fun preconditionVideo(link: String, chat: Chat, silent: Boolean): Boolean {
+        var search = instance.youtube.videos().list("contentDetails")
+        var regex = instance.videoRegex.matcher(link)
+        regex.matches()
+
+        search.id = regex.group(1)
+        search.fields = "items(contentDetails/duration)"
+        search.key = instance.youtubeKey
+        var response = search.execute()
+
+        if (response.items.isEmpty()) {
+            if (!silent) {
+                chat.sendMessage("Unable to find any Youtube video by that ID!")
+            }
+            return false
+        }
+
+        if (instance.parse8601Duration(response.items[0].contentDetails.duration) > 3600L) {
+            if (!silent) {
+                chat.sendMessage("This bot is unable to process videos longer than 1 hour! Sorry!")
+            }
+            return false
+        }
+
+        return true
     }
 
     fun processSearch(chat: Chat, query: String, userId: Long, originalMessage: Message) {
@@ -278,7 +319,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                 try {
                     var int = e.toInt()
 
-                    if (int < 20) // not allow malicious selections
+                    if (int <= session.videoCount && int > 0) // not allow malicious selections
                         selection.add(int)
                 } catch (ignored: Exception) {
                 }
@@ -291,10 +332,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             }
 
             session.options.videoSelection = selection
-            sendPlaylist(session.chat, session.link, session.options, session.userId)
+            sendPlaylist(session.chat, session.link, session.options, session.userId, session.videoCount)
         } else if ("sh".equals(session.selecting)) {
             session.options.matchRegex = content.content
-            sendPlaylist(session.chat, session.link, session.options, session.userId)
+            sendPlaylist(session.chat, session.link, session.options, session.userId, session.videoCount)
         }
     }
 
@@ -320,7 +361,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         if (data.startsWith("v.")) {
             sendVideo(session.chat, "https://www.youtube.com/watch?v=${session.videoMatch}", true, session.originalMessage, session.userId)
         } else {
-            sendPlaylist(session.chat, "https://www.youtube.com/playlist?list=${session.playlistMatch}", null, session.userId)
+            sendPlaylist(session.chat, "https://www.youtube.com/playlist?list=${session.playlistMatch}", null, session.userId, session.playlistVideos)
         }
 
         inlineList.remove(session)
@@ -346,7 +387,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         if ("av".equals(selection)) {
             callback.answer("Selecting...", false)
             session.options.allVideos = true
-            sendPlaylist(session.chat, session.link, session.options, session.userId)
+            sendPlaylist(session.chat, session.link, session.options, session.userId, session.videoCount)
         } else if ("sn".equals(selection)) {
             callback.answer("Please enter the numbers of the videos in the playlist you wish to select, separated by a space\n\n" +
                     "Such as: 1 4 6 7", false)
@@ -414,9 +455,9 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         File("${video.id}.info.json").delete()
     }
 
-    fun sendPlaylist(chat: Chat, link: String, options: PlaylistOptions?, userId: Long) {
+    fun sendPlaylist(chat: Chat, link: String, options: PlaylistOptions?, userId: Long, itemCount: Long) {
         if (chat is Chat && options == null) {
-            var id = playlistSessions.add(PlaylistSession(chat.id, PlaylistOptions(), chat, link, "N/A", userId))
+            var id = playlistSessions.add(PlaylistSession(chat.id, PlaylistOptions(), chat, link, "N/A", userId, itemCount))
             var selectionKeyboard = InlineKeyboardMarkup.builder()
                     .addRow(InlineKeyboardButton.builder().text("Selection").callbackData("pl.sn.$id").build(),
                             InlineKeyboardButton.builder().text("Search").callbackData("pl.sh.$id").build())
@@ -444,6 +485,12 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                 .build())
         var regex = instance.playlistRegex.matcher(link)
         regex.matches()
+
+        if (option.allVideos && itemCount > 10) {
+            option.allVideos = false
+            option.videoSelection = IntRange(0, itemCount.toInt()).toMutableList()
+        }
+
         var playlist = instance.downloadPlaylist(option, regex.group(regex.groupCount()))
 
         chat.sendMessage("Finished processing! Sending ${playlist.videoList.size} videos...")
@@ -458,7 +505,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         chat.sendMessage("Finished sending playlist!")
         timeoutCache.invalidate(userId)
-        playlist.folder.delete() // bye bye
+        playlist.folder.deleteRecursively() // bye bye
         removePlaylistSession(chat.id)
     }
 
@@ -480,10 +527,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 }
 
 private data class CommandSession(val videoMatch: String, val playlistMatch: String, val chat: Chat,
-                                  val userId: Long, val originalMessage: Message)
+                                  val userId: Long, val originalMessage: Message, val playlistVideos: Long)
 
 private data class PlaylistSession(val chatId: String, val options: PlaylistOptions = PlaylistOptions(),
                                    val chat: Chat, val link: String, var selecting: String = "N/A",
-                                   val userId: Long)
+                                   val userId: Long, val videoCount: Long)
 
 private data class CachedYoutubeVideo(val videoId: String, val title: String)

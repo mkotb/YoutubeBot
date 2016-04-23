@@ -147,7 +147,7 @@ class PlaylistCallable(val options: PlaylistOptions, val id: String): Callable<Y
 
         println(addSplit(commandBuilder, " ") + " is executing")
 
-        var process = ProcessBuilder().command(commandBuilder)
+        ProcessBuilder().command(commandBuilder)
                 .directory(folder)
                 .redirectErrorStream(true)
                 .start()
