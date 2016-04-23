@@ -124,14 +124,18 @@ class YoutubeBot(val key: String, val youtubeKey: String) {
     }
 
     fun parseDuration(inp: String): Long {
-        var times = arrayOf(TimeUnit.HOURS, TimeUnit.MINUTES, TimeUnit.SECONDS)
+        var timesGeneral = arrayOf(arrayOf(TimeUnit.SECONDS),
+                arrayOf(TimeUnit.MINUTES, TimeUnit.SECONDS),
+                arrayOf(TimeUnit.HOURS, TimeUnit.MINUTES, TimeUnit.SECONDS))
         var input = inp.split(":")
-        var top = input.size
+        var top = input.size - 1
         var time = 0L
 
-        if (top > 3) {
-            top = 3
+        if (top > 2) {
+            top = 2
         }
+
+        var times = timesGeneral[top]
 
         for (i in 0..top) {
             var unit = times[i]
