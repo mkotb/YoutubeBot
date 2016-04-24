@@ -165,12 +165,31 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
             postProcessArgs.add("-ss ${options.startTime} -to ${options.endTime}")
         }
 
+        if (!postProcessArgs.isEmpty()) {
+            commandBuilder.add("--postprocessor-args")
+            commandBuilder.add("${instance.addSplit(postProcessArgs, " ").replace("'", "\'")}")
+        }
+
+        commandBuilder.add("https://www.youtube.com/watch?v=$id")
+        println(instance.addSplit(commandBuilder, " ") + " is executing")
+
+        var process = ProcessBuilder().command(commandBuilder)
+                .redirectErrorStream(true)
+                .start()
+
+        process.waitFor()
+        InputStreamReader(process.inputStream).readLines().forEach { e -> println(e) }
+        println("Finished downloading $id!")
+
         if (options.speed != 1.0) {
+            println("Setting speed to ${options.speed}...")
+            var filterArg: String
+
             if (options.speed < 0.5) {
-                postProcessArgs.add("-filter:a \"atempo=0.5\"") // i'm sorry but dat is too slow
+                filterArg = "\"atempo=0.5\"" // i'm sorry but dat is too slow
             } else if (options.speed > 2.0) { // GOOTTTAAA GOOO FASSTT
                 var builder = StringBuilder()
-                builder.append("-filter:a \"")
+                builder.append("\"")
 
                 var iterations = Math.floor(options.speed / 2.0).toInt()
                 var extra = options.speed % 2.0
@@ -187,27 +206,21 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
                     builder.append("\"")
                 }
 
-                postProcessArgs.add(builder.toString())
+                filterArg = builder.toString()
             } else {
-                postProcessArgs.add("-filter:a \"atempo=${options.speed}\"")
+                filterArg = "\"atempo=0.5\""
             }
+
+            Files.move(Paths.get("$id.mp3"), Paths.get("$id.old.mp3")) // ffmpeg -i input.mkv -filter:a "atempo=2.0" -vn output.mkv
+            process = ProcessBuilder().command("/usr/bin/ffmpeg", "-i", "$id.old.mp3",
+                    "-filter:a ", filterArg, "-vn", "$id.mp3")
+                    .redirectErrorStream(true)
+                    .start()
+            process.waitFor()
+            InputStreamReader(process.inputStream).readLines().forEach { e -> println(e) }
+            println("finished updating speed!")
+            File("$id.old.mp3").delete()
         }
-
-        if (!postProcessArgs.isEmpty()) {
-            commandBuilder.add("--postprocessor-args")
-            commandBuilder.add("${instance.addSplit(postProcessArgs, " ").replace("'", "\'")}")
-        }
-
-        commandBuilder.add("https://www.youtube.com/watch?v=$id")
-        println(instance.addSplit(commandBuilder, " ") + " is executing")
-
-        var process = ProcessBuilder().command(commandBuilder)
-                .redirectErrorStream(true)
-                .start()
-
-        process.waitFor()
-        InputStreamReader(process.inputStream).readLines().forEach { e -> println(e) }
-        println("Finished downloading $id!")
 
         return YoutubeVideo(id, File("$id.mp3")).fetchMetadata()
     }
