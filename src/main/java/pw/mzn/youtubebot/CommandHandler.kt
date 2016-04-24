@@ -2,7 +2,7 @@ package pw.mzn.youtubebot
 
 import com.google.common.cache.CacheBuilder
 import pro.zackpollard.telegrambot.api.chat.CallbackQuery
-import pro.zackpollard.telegrambot.api.chat.Chat
+import pro.zackpollard.telegrambot.api.chat.GroupChat
 import pro.zackpollard.telegrambot.api.chat.message.Message
 import pro.zackpollard.telegrambot.api.chat.message.content.TextContent
 import pro.zackpollard.telegrambot.api.chat.message.send.ParseMode
@@ -563,7 +563,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
     fun sendVideo(chat: Chat, link: String, linkSent: Boolean, originalQuery: Message?, userId: Long,
                   optionz: VideoOptions?, duration: Long) {
-        if (chat is Chat && optionz == null) {
+        if (chat !is GroupChat && optionz == null) {
             var id = videoSessions.add(VideoSession(chat.id, link, VideoOptions(0, duration), chat, linkSent, userId, originalQuery, duration))
             var response = SendableTextMessage.builder()
                     .message("How would you like to customize your video?")
@@ -609,7 +609,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
     }
 
     fun sendPlaylist(chat: Chat, link: String, options: PlaylistOptions?, userId: Long, itemCount: Long) {
-        if (chat is Chat && options == null) {
+        if (chat !is GroupChat && options == null) {
             var id = playlistSessions.add(PlaylistSession(chat.id, PlaylistOptions(), chat, link, "N/A", userId, itemCount))
             var message = "How would you like to select the videos from this playlist?"
             var selectionKeyboard = InlineKeyboardMarkup.builder()
