@@ -8,6 +8,7 @@ import com.google.api.services.youtube.model.SearchListResponse
 import com.mashape.unirest.http.Unirest
 import pro.zackpollard.telegrambot.api.TelegramBot
 import java.io.File
+import java.io.InputStreamReader
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.Period
@@ -227,8 +228,10 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
                     .redirectErrorStream(true)
                     .start()
             process.waitFor()
+            InputStreamReader(process.inputStream).forEachLine { e -> println(e) }
             println("finished setting thumbnail")
-            //File("$id.old.mp3").delete()
+            File("$id.mp3").delete()
+            Files.move(Paths.get("$id.mp3.mp3"), Paths.get("$id.mp3"))
             File("$id.jpg").delete()
         }
 
