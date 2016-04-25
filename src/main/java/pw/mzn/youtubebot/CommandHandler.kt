@@ -303,7 +303,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             return
         }
 
-        content[0].downloadFile(instance.bot, File("${session.videoId}.jpg"))
+        content[content.size - 1].downloadFile(instance.bot, File("${session.videoId}.jpg"))
         event.chat.sendMessage(SendableTextMessage.builder()
                 .replyTo(event.message)
                 .message("Updated!").build())
