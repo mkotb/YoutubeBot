@@ -189,8 +189,6 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
                 filterArg = "atempo=0.5" // i'm sorry but dat is too slow
             } else if (options.speed > 2.0) { // GOOTTTAAA GOOO FASSTT
                 var builder = StringBuilder()
-                builder.append("\"")
-
                 var iterations = Math.floor(options.speed / 2.0).toInt()
                 var extra = options.speed % 2.0
 
