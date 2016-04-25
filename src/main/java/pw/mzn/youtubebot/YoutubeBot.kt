@@ -186,7 +186,7 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
             var filterArg: String
 
             if (options.speed < 0.5) {
-                filterArg = "\"atempo=0.5\"" // i'm sorry but dat is too slow
+                filterArg = "atempo=0.5" // i'm sorry but dat is too slow
             } else if (options.speed > 2.0) { // GOOTTTAAA GOOO FASSTT
                 var builder = StringBuilder()
                 builder.append("\"")
@@ -201,17 +201,15 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
                 builder.append("atempo=2.0")
 
                 if (extra != 0.0) {
-                    builder.append(",atempo=$extra\"")
-                } else {
-                    builder.append("\"")
+                    builder.append(",atempo=$extra")
                 }
 
                 filterArg = builder.toString()
             } else {
-                filterArg = "\"atempo=0.5\""
+                filterArg = "atempo=0.5"
             }
 
-            Files.move(Paths.get("$id.mp3"), Paths.get("$id.old.mp3")) // ffmpeg -i input.mkv -filter:a "atempo=2.0" -vn output.mkv
+            Files.move(Paths.get("$id.mp3"), Paths.get("$id.old.mp3"))
             process = ProcessBuilder().command("/usr/bin/ffmpeg", "-i", "$id.old.mp3",
                     "-filter:a ", filterArg, "-vn", "$id.mp3")
                     .redirectErrorStream(true)
