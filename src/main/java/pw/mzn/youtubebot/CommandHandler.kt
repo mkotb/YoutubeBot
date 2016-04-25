@@ -592,6 +592,17 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         if ((chat !is GroupChat && chat !is SuperGroupChat) && optionz == null) {
             var id = videoSessions.add(VideoSession(chat.id, link, VideoOptions(0, duration), chat, linkSent, userId, originalQuery, duration,
                     thumbnails[regex.group(1)]!!))
+            var reply = SendableTextMessage.builder()
+                    .message("Initializing...")
+            var hide = ReplyKeyboardHide.builder()
+
+            if (originalQuery != null) {
+                hide.selective(true)
+                reply.replyTo(originalQuery)
+            }
+
+            reply.replyMarkup(hide.build())
+            chat.sendMessage(reply.build())
             var response = SendableTextMessage.builder()
                     .message("How would you like to customize your video?")
                     .replyMarkup(videoKeyboardFor(id))
