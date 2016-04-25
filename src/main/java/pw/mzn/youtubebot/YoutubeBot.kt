@@ -231,6 +231,7 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
             InputStreamReader(process.inputStream).readLines().forEach { e -> println(e) }
             println("finished setting thumbnail")
             File("$id.old.mp3").delete()
+            File("$id.jpg").delete()
         }
 
         return YoutubeVideo(id, File("$id.mp3")).fetchMetadata()
