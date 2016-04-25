@@ -232,7 +232,7 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
             println("finished setting thumbnail")
             File("$id.mp3").delete()
             Files.move(Paths.get("$id.mp3.mp3"), Paths.get("$id.mp3"))
-            //File("$id.jpg").delete()
+            File("$id.jpg").delete()
         }
 
         return YoutubeVideo(id, File("$id.mp3")).fetchMetadata()

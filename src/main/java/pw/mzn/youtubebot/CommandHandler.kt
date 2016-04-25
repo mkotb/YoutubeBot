@@ -756,7 +756,6 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         }
 
         chat.sendMessage(audio.build())
-        chat.sendMessage(SendablePhotoMessage.builder().photo(InputFile(File("${video.id}.jpg"))).build())
         timeoutCache.invalidate(userId)
         video.file.delete()
 
