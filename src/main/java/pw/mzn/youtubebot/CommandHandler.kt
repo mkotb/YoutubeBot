@@ -506,14 +506,18 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                     .replyTo(event.message)
                     .message("Updated!").build())
         } else if ("tn".equals(selecting)) {
-            if ("Custom".equals(selecting)) {
+            if ("Custom".equals(message)) {
                 session.pendingImage = true
-                event.chat.sendMessage("Please send your thumbnail...")
-            } else if ("Default".equals(selecting)) {
+                event.chat.sendMessage(SendableTextMessage.builder()
+                        .replyTo(event.message)
+                        .replyMarkup(ReplyKeyboardHide.builder().selective(true).build())
+                        .message("Please send your thumbnail...").build())
+            } else if ("Default".equals(message)) {
                 session.options.thumbnail = true
                 session.thumbnail = thumbnails[session.videoId]!!
                 event.chat.sendMessage(SendableTextMessage.builder()
                         .replyTo(event.message)
+                        .replyMarkup(ReplyKeyboardHide.builder().selective(true).build())
                         .message("Updated!").build())
             } else {
                 event.chat.sendMessage("Please use the keyboard to continue...")
