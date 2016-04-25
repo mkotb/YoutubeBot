@@ -230,7 +230,6 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
                     .redirectErrorStream(true)
                     .start()
             process.waitFor()
-            InputStreamReader(process.inputStream).readLines().forEach { e -> println(e) }
             println("finished setting thumbnail")
             File("$id.old.mp3").delete()
             File("$id.jpg").delete()

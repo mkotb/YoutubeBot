@@ -308,6 +308,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         event.chat.sendMessage(SendableTextMessage.builder()
                 .replyTo(event.message)
                 .message("Updated!").build())
+        instance.bot.editMessageReplyMarkup(session.chatId, session.botMessageId, videoKeyboardFor(entry.key))
 
         session.pendingImage = false
         session.options.thumbnailUrl = "N/A"
