@@ -441,6 +441,24 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             }
 
             session.options.speed = speed
+        } else if ("te".equals(selecting)) {
+            var title = message.trim()
+
+            if ("".equals(title)) {
+                event.chat.sendMessage("Please enter a valid title!")
+                return
+            }
+
+            session.options.customTitle = title
+        } else if ("pr".equals(selecting)) {
+            var performer = message.trim()
+
+            if ("".equals(performer)) {
+                event.chat.sendMessage("Please enter a valid title!")
+                return
+            }
+
+            session.options.customPerformer = performer
         }
 
         session.selecting = "N/A" // reset back to processVideoInline()
@@ -509,6 +527,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             callback.answer("Please enter the end time.\nExample: 3:15 for 3 minutes and 15 minutes in", false)
         } else if ("s".equals(selection)) {
             callback.answer("Please enter the speed.\nExample: 2.5 for 2.5 times the speed", false)
+        } else if ("te".equals(selection)) {
+            callback.answer("Please enter your new title", false)
+        } else if ("pr".equals(selection)) {
+            callback.answer("Please enter your new performer", false)
         } else {
             callback.answer("not a selection", true)
         }
@@ -571,6 +593,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                                              .callbackData("vd.s.$id").build(),
                         InlineKeyboardButton.builder().text("Thumbnail ${friendlyBoolean(session.options.thumbnail)}")
                                              .callbackData("vd.tn.$id").build())
+                .addRow(InlineKeyboardButton.builder().text("Change Title")
+                                             .callbackData("vd.te.$id").build(),
+                        InlineKeyboardButton.builder().text("Change Performer")
+                                             .callbackData("vd.pr.$id").build())
                 .addRow(InlineKeyboardButton.builder().text("Send to Processing...")
                                              .callbackData("vd.p.$id").build())
                 .build()
@@ -637,9 +663,20 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         }
 
         var markup = chat.sendMessage(md.build())
-        chat.sendMessage(video.sendable().replyTo(markup).build())
+        var audio = video.sendable().replyTo(markup)
+
+        if (!"N/A".equals(options.customTitle)) {
+            audio.title(options.customTitle)
+        }
+
+        if (!"N/A".equals(options.customPerformer)) {
+            audio.performer(options.customPerformer)
+        }
+
+        chat.sendMessage(audio.build())
         timeoutCache.invalidate(userId)
         video.file.delete()
+
         File("${video.id}.info.json").delete()
         removeVideoSession(chat.id)
     }
