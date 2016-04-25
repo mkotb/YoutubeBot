@@ -7,7 +7,9 @@ import pro.zackpollard.telegrambot.api.chat.GroupChat
 import pro.zackpollard.telegrambot.api.chat.SuperGroupChat
 import pro.zackpollard.telegrambot.api.chat.message.Message
 import pro.zackpollard.telegrambot.api.chat.message.content.TextContent
+import pro.zackpollard.telegrambot.api.chat.message.send.InputFile
 import pro.zackpollard.telegrambot.api.chat.message.send.ParseMode
+import pro.zackpollard.telegrambot.api.chat.message.send.SendableDocumentMessage
 import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage
 import pro.zackpollard.telegrambot.api.event.Listener
 import pro.zackpollard.telegrambot.api.event.chat.CallbackQueryReceivedEvent
@@ -758,7 +760,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         chat.sendMessage(audio.build())
         timeoutCache.invalidate(userId)
-        video.file.delete()
+        chat.sendMessage(SendableDocumentMessage.builder()
+                .document(InputFile(video.file))
+                .build())
+        //video.file.delete()
 
         File("${video.id}.info.json").delete()
         removeVideoSession(chat.id)
