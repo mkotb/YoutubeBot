@@ -204,7 +204,7 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
 
                 filterArg = builder.toString()
             } else {
-                filterArg = "atempo=0.5"
+                filterArg = "atempo=${options.speed}"
             }
 
             Files.move(Paths.get("$id.mp3"), Paths.get("$id.old.mp3"))
