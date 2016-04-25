@@ -7,10 +7,7 @@ import pro.zackpollard.telegrambot.api.chat.GroupChat
 import pro.zackpollard.telegrambot.api.chat.SuperGroupChat
 import pro.zackpollard.telegrambot.api.chat.message.Message
 import pro.zackpollard.telegrambot.api.chat.message.content.TextContent
-import pro.zackpollard.telegrambot.api.chat.message.send.InputFile
-import pro.zackpollard.telegrambot.api.chat.message.send.ParseMode
-import pro.zackpollard.telegrambot.api.chat.message.send.SendableDocumentMessage
-import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage
+import pro.zackpollard.telegrambot.api.chat.message.send.*
 import pro.zackpollard.telegrambot.api.event.Listener
 import pro.zackpollard.telegrambot.api.event.chat.CallbackQueryReceivedEvent
 import pro.zackpollard.telegrambot.api.event.chat.message.CommandMessageReceivedEvent
@@ -759,6 +756,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         }
 
         chat.sendMessage(audio.build())
+        chat.sendMessage(SendablePhotoMessage.builder().photo(InputFile(File("${video.id}.jpg"))).build())
         timeoutCache.invalidate(userId)
         video.file.delete()
 
