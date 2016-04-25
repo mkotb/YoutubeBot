@@ -760,10 +760,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         chat.sendMessage(audio.build())
         timeoutCache.invalidate(userId)
-        chat.sendMessage(SendableDocumentMessage.builder()
-                .document(InputFile(video.file))
-                .build())
-        //video.file.delete()
+        video.file.delete()
 
         File("${video.id}.info.json").delete()
         removeVideoSession(chat.id)
