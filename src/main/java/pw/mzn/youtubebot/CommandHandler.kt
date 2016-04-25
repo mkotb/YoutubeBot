@@ -441,8 +441,6 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             }
 
             session.options.speed = speed
-        } else if ("tn".equals(selecting)) {
-            session.options.thumbnail = !session.options.thumbnail
         }
 
         session.selecting = "N/A" // reset back to processVideoInline()
@@ -496,6 +494,13 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             return
         }
 
+        if ("tn".equals(selection)) {
+            session.options.thumbnail = !session.options.thumbnail
+            instance.bot.editMessageReplyMarkup(session.chatId, session.botMessageId, videoKeyboardFor(data.split(".")[2].toInt()))
+            callback.answer("Updated...", false)
+            return
+        }
+
         // all steps below go to processVideoMessage
 
         if ("st".equals(selection)) {
@@ -505,8 +510,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         } else if ("s".equals(selection)) {
             callback.answer("Please enter the speed.\nExample: 2.5 for 2.5 times the speed", false)
         } else {
-            callback.answer("no", true)
-            return
+            callback.answer("not a selection", true)
         }
 
         session.selecting = selection
@@ -626,7 +630,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         timeoutCache.invalidate(userId)
         video.file.delete()
         File("${video.id}.info.json").delete()
-        removePlaylistSession(chat.id)
+        removeVideoSession(chat.id)
     }
 
     fun sendPlaylist(chat: Chat, link: String, options: PlaylistOptions?, userId: Long, itemCount: Long) {
