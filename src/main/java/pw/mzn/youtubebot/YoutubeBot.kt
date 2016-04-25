@@ -218,9 +218,11 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
 
         if (options.thumbnail) {
             println("Setting thumbnail...")
-            var res = Unirest.get(options.thumbnailUrl).asBinary()
+            if (!"N/A".equals(options.thumbnailUrl)) {
+                var res = Unirest.get(options.thumbnailUrl).asBinary()
+                Files.copy(res.body, Paths.get("$id.jpg"))
+            }
 
-            Files.copy(res.body, Paths.get("$id.jpg"))
             Files.move(Paths.get("$id.mp3"), Paths.get("$id.old.mp3"))
             process = ProcessBuilder().command("/usr/bin/ffmpeg", "-i", "$id.old.mp3",
                     "-i", "$id.jpg", "-map_metadata", "0", "-map", "0", "-map", "1",

@@ -12,6 +12,7 @@ import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage
 import pro.zackpollard.telegrambot.api.event.Listener
 import pro.zackpollard.telegrambot.api.event.chat.CallbackQueryReceivedEvent
 import pro.zackpollard.telegrambot.api.event.chat.message.CommandMessageReceivedEvent
+import pro.zackpollard.telegrambot.api.event.chat.message.PhotoMessageReceivedEvent
 import pro.zackpollard.telegrambot.api.event.chat.message.TextMessageReceivedEvent
 import pro.zackpollard.telegrambot.api.keyboards.*
 import java.io.File
@@ -58,7 +59,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                      "You can throw at it links from YouTube, or give it a search query such as " +
                      "\"Stressed Out Tomize Remix\" and it'll respond to you as soon as it can.\n It also works " +
                      "with playlists! You can make the bot download your favourite podcasts on YouTube or your " +
-                     "favourite songs. Give it a try, send any query!")
+                     "favourite songs. Give it a try, send any query!\n\nContact @MazenK for support")
              return
          }
     }
@@ -278,6 +279,41 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         }
     }
 
+
+    override fun onPhotoMessageReceived(event: PhotoMessageReceivedEvent?) {
+        var videoEntry = videoSessions.map.entries.filter { e -> e.value.chatId.equals(event!!.chat.id) }
+                .firstOrNull()
+
+        if (videoEntry != null) {
+            processVideoThumbnail(event!!, videoEntry)
+            return
+        }
+    }
+
+    private fun processVideoThumbnail(event: PhotoMessageReceivedEvent,
+                              entry: MutableMap.MutableEntry<Int, VideoSession>) {
+        var session = entry.value
+
+        if (!session.pendingImage) {
+            return
+        }
+
+        var content = event.content.content
+
+        if (content.size < 1) {
+            return
+        }
+
+        content[0].downloadFile(instance.bot, File("${session.videoId}.jpg"))
+        event.chat.sendMessage(SendableTextMessage.builder()
+                .replyTo(event.message)
+                .message("Updated!").build())
+
+        session.pendingImage = false
+        session.options.thumbnailUrl = "N/A"
+        session.options.thumbnail = true
+    }
+
     override fun onTextMessageReceived(event: TextMessageReceivedEvent?) {
         println("received a message") // debug
         var playlistEntry = playlistSessions.map.entries.filter { e -> e.value.chatId.equals(event!!.chat.id) }
@@ -469,6 +505,20 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             event.chat.sendMessage(SendableTextMessage.builder()
                     .replyTo(event.message)
                     .message("Updated!").build())
+        } else if ("tn".equals(selecting)) {
+            if ("Custom".equals(selecting)) {
+                session.pendingImage = true
+                event.chat.sendMessage("Please send your thumbnail...")
+            } else if ("Default".equals(selecting)) {
+                session.options.thumbnail = true
+                session.thumbnail = thumbnails[session.videoId]!!
+                event.chat.sendMessage(SendableTextMessage.builder()
+                        .replyTo(event.message)
+                        .message("Updated!").build())
+            } else {
+                event.chat.sendMessage("Please use the keyboard to continue...")
+                return
+            }
         }
 
         session.selecting = "N/A" // reset back to processVideoInline()
@@ -523,9 +573,28 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         }
 
         if ("tn".equals(selection)) {
-            session.options.thumbnail = !session.options.thumbnail
+            if (session.options.thumbnail) {
+                callback.answer("Disabling thumbnail...", false)
+                var thumbnail = File("${session.videoId}.jpg")
+
+                if (thumbnail.exists()) {
+                    thumbnail.delete()
+                }
+
+                session.options.thumbnail = false
+            } else {
+                callback.answer("Please answer the following question accordingly...", false)
+                var replyKeyboard = ReplyKeyboardMarkup.builder()
+                        .addRow(KeyboardButton.builder().text("Custom").build(),
+                                KeyboardButton.builder().text("Default").build()).build()
+                session.chat.sendMessage(SendableTextMessage.builder()
+                        .message("Which type of thumbnail would you like to use?")
+                        .replyMarkup(replyKeyboard).build())
+                session.selecting = selection
+            }
+            /*session.options.thumbnail = !session.options.thumbnail
             instance.bot.editMessageReplyMarkup(session.chatId, session.botMessageId, videoKeyboardFor(data.split(".")[2].toInt()))
-            callback.answer("Updated...", false)
+            callback.answer("Updated...", false)*/
             return
         }
 
@@ -622,12 +691,8 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
     fun sendVideo(chat: Chat, link: String, linkSent: Boolean, originalQuery: Message?, userId: Long,
                   optionz: VideoOptions?, duration: Long) {
-        var regex = instance.videoRegex.matcher(link)
-        regex.matches()
-
         if ((chat !is GroupChat && chat !is SuperGroupChat) && optionz == null) {
-            var id = videoSessions.add(VideoSession(chat.id, link, VideoOptions(0, duration), chat, linkSent, userId, originalQuery, duration,
-                    thumbnails[regex.group(1)]!!))
+            var id = videoSessions.add(VideoSession(instance, chat.id, link, VideoOptions(0, duration), chat, linkSent, userId, originalQuery, duration))
             var reply = SendableTextMessage.builder()
                     .message("Initializing...")
             var hide = ReplyKeyboardHide.builder()
@@ -663,6 +728,8 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         reply.replyMarkup(hide.build())
         chat.sendMessage(reply.build())
+        var regex = instance.videoRegex.matcher(link)
+        regex.matches()
         var video = instance.downloadVideo(options, regex.group(1))
         var md = SendableTextMessage.builder()
                 .message(descriptionFor(video, linkSent))
@@ -776,9 +843,17 @@ private data class PlaylistSession(val chatId: String, val options: PlaylistOpti
                                    val chat: Chat, val link: String, var selecting: String = "N/A",
                                    val userId: Long, val videoCount: Long)
 
-private data class VideoSession(val chatId: String, val link: String, val options: VideoOptions = VideoOptions(),
+private data class VideoSession(val instance: YoutubeBot, val chatId: String, val link: String, val options: VideoOptions = VideoOptions(),
                                 val chat: Chat, val linkSent: Boolean, val userId: Long,
-                                val originalQuery: Message?, val duration: Long, val thumbnail: String, var selecting: String = "N/A",
-                                var botMessageId: Long = -1L)
+                                val originalQuery: Message?, val duration: Long, var thumbnail: String = "N/A", var selecting: String = "N/A",
+                                var botMessageId: Long = -1L, var pendingImage: Boolean = false) {
+    val videoId: String
+
+    init {
+        var regex = instance.videoRegex.matcher(link)
+        regex.matches()
+        videoId = regex.group(1)
+    }
+}
 
 private data class CachedYoutubeVideo(val videoId: String, val title: String)
