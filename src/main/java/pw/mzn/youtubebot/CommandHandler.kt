@@ -302,6 +302,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         var query = event.content.content
 
+        if (query.contains("@YTDL_Bot") && !query.startsWith("@YTDL_Bot")) {
+            return // probably just a mention, not a search
+        }
+
         if (query.startsWith("@YTDL_Bot")) { // group chats
             query = query.replace("@YTDL_Bot ", "")
         }
@@ -450,6 +454,9 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             }
 
             session.options.customTitle = title
+            event.chat.sendMessage(SendableTextMessage.builder()
+                    .replyTo(event.message)
+                    .message("Updated!").build())
         } else if ("pr".equals(selecting)) {
             var performer = message.trim()
 
@@ -459,6 +466,9 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             }
 
             session.options.customPerformer = performer
+            event.chat.sendMessage(SendableTextMessage.builder()
+                    .replyTo(event.message)
+                    .message("Updated!").build())
         }
 
         session.selecting = "N/A" // reset back to processVideoInline()
