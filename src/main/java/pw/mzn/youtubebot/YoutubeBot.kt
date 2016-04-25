@@ -216,6 +216,23 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
             File("$id.old.mp3").delete()
         }
 
+        if (options.thumbnail) {
+            println("Setting thumbnail...")
+            var res = Unirest.get(options.thumbnailUrl).asBinary()
+
+            Files.copy(res.body, Paths.get("$id.jpg"))
+            Files.move(Paths.get("$id.mp3"), Paths.get("$id.old.mp3"))
+            process = ProcessBuilder().command("/usr/bin/ffmpeg", "-i", "$id.old.mp3",
+                    "-i", "$id.jpg", "-map_metadata", "0", "-map", "0", "-map", "1",
+                    "$id.mp3")
+                    .redirectErrorStream(true)
+                    .start()
+            process.waitFor()
+            InputStreamReader(process.inputStream).readLines().forEach { e -> println(e) }
+            println("finished setting thumbnail")
+            File("$id.old.mp3").delete()
+        }
+
         return YoutubeVideo(id, File("$id.mp3")).fetchMetadata()
     }
 }

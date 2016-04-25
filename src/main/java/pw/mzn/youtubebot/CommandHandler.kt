@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 class CommandHandler(val instance: YoutubeBot): Listener {
+    private val thumbnails = ConcurrentHashMap<String, String>() // key = video id, val = link
     private val userSearch = ConcurrentHashMap<Long, List<CachedYoutubeVideo>>()
     private val inlineList = IdList<CommandSession>()
     private val playlistSessions = IdList<PlaylistSession>()
@@ -161,12 +162,12 @@ class CommandHandler(val instance: YoutubeBot): Listener {
     }
 
     fun preconditionVideo(link: String, chat: Chat, silent: Boolean): Long {
-        var search = instance.youtube.videos().list("contentDetails")
+        var search = instance.youtube.videos().list("contentDetails,snippet")
         var regex = instance.videoRegex.matcher(link)
         regex.lookingAt()
 
         search.id = regex.group(1)
-        search.fields = "items(contentDetails/duration)"
+        search.fields = "items(contentDetails/duration, snippet/thumbnails/medium/url)"
         search.key = instance.youtubeKey
         var response = search.execute()
 
@@ -185,6 +186,9 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             }
             return -1L
         }
+
+        if (!thumbnails.containsKey(search.id))
+            thumbnails.put(search.id, response.items[0].snippet.thumbnails.medium.url)
 
         return duration
     }
@@ -437,6 +441,8 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             }
 
             session.options.speed = speed
+        } else if ("tn".equals(selecting)) {
+            session.options.thumbnail = !session.options.thumbnail
         }
 
         session.selecting = "N/A" // reset back to processVideoInline()
@@ -485,6 +491,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         if ("p".equals(selection)) { // exit route
             callback.answer("Sending to processing queue...", false)
+            session.options.thumbnailUrl = session.thumbnail
             sendVideo(session.chat, session.link, session.linkSent, session.originalQuery, session.userId, session.options, session.duration)
             return
         }
@@ -557,16 +564,30 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                         InlineKeyboardButton.builder().text("End Time ${instance.formatTime(session.options.endTime)}")
                                              .callbackData("vd.et.$id").build())
                 .addRow(InlineKeyboardButton.builder().text("Speed ${session.options.speed}x")
-                                             .callbackData("vd.s.$id").build())
+                                             .callbackData("vd.s.$id").build(),
+                        InlineKeyboardButton.builder().text("Thumbnail ${friendlyBoolean(session.options.thumbnail)}")
+                                             .callbackData("vd.tn.$id").build())
                 .addRow(InlineKeyboardButton.builder().text("Send to Processing...")
                                              .callbackData("vd.p.$id").build())
                 .build()
     }
 
+    private fun friendlyBoolean(bool: Boolean): String {
+        if (bool) {
+            return "Yes"
+        } else {
+            return "No"
+        }
+    }
+
     fun sendVideo(chat: Chat, link: String, linkSent: Boolean, originalQuery: Message?, userId: Long,
                   optionz: VideoOptions?, duration: Long) {
+        var regex = instance.videoRegex.matcher(link)
+        regex.matches()
+
         if ((chat !is GroupChat && chat !is SuperGroupChat) && optionz == null) {
-            var id = videoSessions.add(VideoSession(chat.id, link, VideoOptions(0, duration), chat, linkSent, userId, originalQuery, duration))
+            var id = videoSessions.add(VideoSession(chat.id, link, VideoOptions(0, duration), chat, linkSent, userId, originalQuery, duration,
+                    thumbnails[regex.group(1)]!!))
             var response = SendableTextMessage.builder()
                     .message("How would you like to customize your video?")
                     .replyMarkup(videoKeyboardFor(id))
@@ -591,8 +612,6 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         reply.replyMarkup(hide.build())
         chat.sendMessage(reply.build())
-        var regex = instance.videoRegex.matcher(link)
-        regex.matches()
         var video = instance.downloadVideo(options, regex.group(1))
         var md = SendableTextMessage.builder()
                 .message(descriptionFor(video, linkSent))
@@ -697,7 +716,7 @@ private data class PlaylistSession(val chatId: String, val options: PlaylistOpti
 
 private data class VideoSession(val chatId: String, val link: String, val options: VideoOptions = VideoOptions(),
                                 val chat: Chat, val linkSent: Boolean, val userId: Long,
-                                val originalQuery: Message?, val duration: Long, var selecting: String = "N/A",
+                                val originalQuery: Message?, val duration: Long, val thumbnail: String, var selecting: String = "N/A",
                                 var botMessageId: Long = -1L)
 
 private data class CachedYoutubeVideo(val videoId: String, val title: String)
