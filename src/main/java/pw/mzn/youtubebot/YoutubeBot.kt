@@ -178,7 +178,6 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
                 .start()
 
         process.waitFor()
-        InputStreamReader(process.inputStream).readLines().forEach { e -> println(e) }
         println("Finished downloading $id!")
 
         if (options.speed != 1.0) {
@@ -213,8 +212,6 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
                     .redirectErrorStream(true)
                     .start()
             process.waitFor()
-            InputStreamReader(process.inputStream).readLines().forEach { e -> println(e) }
-            println(filterArg)
             println("finished updating speed!")
             File("$id.old.mp3").delete()
         }
