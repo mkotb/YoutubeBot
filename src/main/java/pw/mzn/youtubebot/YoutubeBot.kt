@@ -7,6 +7,7 @@ import com.google.api.services.youtube.YouTube
 import com.google.api.services.youtube.model.SearchListResponse
 import com.mashape.unirest.http.Unirest
 import pro.zackpollard.telegrambot.api.TelegramBot
+import pro.zackpollard.telegrambot.api.chat.Chat
 import java.io.File
 import java.io.InputStreamReader
 import java.nio.file.Files
@@ -25,6 +26,7 @@ class YoutubeBot(val key: String, val youtubeKey: String) {
     val playlistRegex = Pattern.compile("^.*(youtu\\.be\\/|list=)([^#&?]*).*")
     val videoRegex = Pattern.compile("^(?:https?:\\/\\/)?(?:www\\.)?(?:youtube\\.com|youtu\\.be)\\/watch\\?v=([^&]+)")
     val executable = File("youtube-dl")
+    val commandHandler = CommandHandler(this)
     var bot: TelegramBot by Delegates.notNull()
     var youtube: YouTube by Delegates.notNull()
 
@@ -32,7 +34,9 @@ class YoutubeBot(val key: String, val youtubeKey: String) {
         downloadExecutable()
 
         bot = TelegramBot.login(key)
-        bot.eventsManager.register(CommandHandler(this))
+        bot.eventsManager.register(commandHandler)
+        bot.eventsManager.register(InlineHandler(this))
+        bot.eventsManager.register(PhotoHandler(this))
         bot.startUpdates(false)
 
         youtube = YouTube.Builder(NetHttpTransport(), JacksonFactory(), HttpRequestInitializer {  })
@@ -151,6 +155,58 @@ class YoutubeBot(val key: String, val youtubeKey: String) {
         }
 
         return time
+    }
+
+    fun preconditionPlaylist(link: String, chat: Chat, silent: Boolean): Long {
+        var search = youtube.playlists().list("id,contentDetails")
+        var regex = playlistRegex.matcher(link)
+        regex.lookingAt()
+
+        search.id = regex.group(regex.groupCount())
+        search.fields = "items(id, contentDetails/itemCount)"
+        search.key = youtubeKey
+        var response = search.execute()
+
+        if (response.items.isEmpty()) {
+            if (!silent) {
+                chat.sendMessage("Unable to find any playlists by that ID!")
+            }
+            return -1
+        }
+
+        return response.items[0].contentDetails.itemCount
+    }
+
+    fun preconditionVideo(link: String, chat: Chat, silent: Boolean): Long {
+        var search = youtube.videos().list("contentDetails,snippet")
+        var regex = videoRegex.matcher(link)
+        regex.lookingAt()
+
+        search.id = regex.group(1)
+        search.fields = "items(contentDetails/duration, snippet/thumbnails/medium/url)"
+        search.key = youtubeKey
+        var response = search.execute()
+
+        if (response.items.isEmpty()) {
+            if (!silent) {
+                chat.sendMessage("Unable to find any Youtube video by that ID!")
+            }
+            return -1L
+        }
+
+        var duration = parse8601Duration(response.items[0].contentDetails.duration)
+
+        if (duration > 3600L) {
+            if (!silent) {
+                chat.sendMessage("This bot is unable to process videos longer than 1 hour! Sorry!")
+            }
+            return -1L
+        }
+
+        if (!commandHandler.thumbnails.containsKey(search.id))
+            commandHandler.thumbnails.put(search.id, response.items[0].snippet.thumbnails.medium.url)
+
+        return duration
     }
 }
 
