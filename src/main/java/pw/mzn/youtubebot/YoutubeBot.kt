@@ -285,7 +285,11 @@ class PlaylistCallable(val options: PlaylistOptions, val id: String, val instanc
 
 /************************
         TODO List
- - Inline video searching
- - Add suggestions to send
-   thumbnails
+ - Inline (using audio as preview)
+ - Cleaning up messages to be more friendly
+ - (Big one) Allow users to link the bot to a playlist and have all their
+   downloaded videos be added to the playlist, and use the bot as a "player"
+   being able to index through the playlist and select the song they want.
+   Then the bot will return the song (or songs, maybe allow things like shuffling
+   or full playthrough) accordingly though telegram cache (i.e save the upload IDs of songs)
  ************************/
