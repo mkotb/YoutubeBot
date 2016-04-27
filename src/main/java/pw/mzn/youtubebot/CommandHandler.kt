@@ -1,6 +1,7 @@
 package pw.mzn.youtubebot
 
 import com.google.common.cache.CacheBuilder
+import de.umass.lastfm.Track
 import pro.zackpollard.telegrambot.api.chat.CallbackQuery
 import pro.zackpollard.telegrambot.api.chat.Chat
 import pro.zackpollard.telegrambot.api.chat.GroupChat
@@ -23,6 +24,7 @@ import java.util.concurrent.TimeUnit
 class CommandHandler(val instance: YoutubeBot): Listener {
     val thumbnails = ConcurrentHashMap<String, String>() // key = video id, val = link
     val userSearch = ConcurrentHashMap<Long, List<CachedYoutubeVideo>>()
+    val trackStore = ConcurrentHashMap<Long, TrackSession>()
     val inlineList = IdList<CommandSession>()
     val playlistSessions = IdList<PlaylistSession>()
     val videoSessions = IdList<VideoSession>()
@@ -30,28 +32,33 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             .concurrencyLevel(5)
             .expireAfterWrite(10, TimeUnit.MINUTES)
             .build<Long, Any?>()
+    val titleCache = CacheBuilder.newBuilder()
+            .concurrencyLevel(5)
+            .expireAfterWrite(8, TimeUnit.HOURS)
+            .build<String, String>() // key = video id, val = title
 
     fun sendVideo(chat: Chat, link: String, linkSent: Boolean, originalQuery: Message?, userId: Long,
-                  optionz: VideoOptions?, duration: Long) {
-        if ((chat !is GroupChat && chat !is SuperGroupChat) && optionz == null) {
+                  optionz: VideoOptions?, duration: Long, title: String) {
+        var search = instance.searchTrack(title).toMutableList()
+
+        if (((chat is GroupChat) || optionz == null) && !search.isEmpty()) {
+            var track = search[0]
+            var session = VideoSession(instance, chat.id, link, VideoOptions(0, duration), chat, linkSent, userId, originalQuery, duration)
+            var replyKeyboard = InlineKeyboardMarkup.builder()
+                    .addRow(InlineKeyboardButton.builder().text("Yes").callbackData("lf.y").build(),
+                            InlineKeyboardButton.builder().text("No").callbackData("lf.n").build()).build()
+
+            chat.sendMessage(SendableTextMessage.builder()
+                    .message("Is this song ${track.name} by ${track.artist}?")
+                    .replyMarkup(replyKeyboard).build())
+            trackStore.put(userId, TrackSession(session, track))
+
+            return
+        }
+
+        if ((chat !is GroupChat) && optionz == null) {
             var id = videoSessions.add(VideoSession(instance, chat.id, link, VideoOptions(0, duration), chat, linkSent, userId, originalQuery, duration))
-            var reply = SendableTextMessage.builder()
-                    .message("Initializing...")
-            var hide = ReplyKeyboardHide.builder()
-
-            if (originalQuery != null) {
-                hide.selective(true)
-                reply.replyTo(originalQuery)
-            }
-
-            reply.replyMarkup(hide.build())
-            chat.sendMessage(reply.build())
-            var response = SendableTextMessage.builder()
-                    .message("How would you like to customize your video?")
-                    .replyMarkup(videoKeyboardFor(id))
-                    .build()
-
-            videoSessions.get(id)!!.botMessageId = chat.sendMessage(response).messageId // next step is processVideoInline()
+            initCustomization(id, originalQuery, chat)
             return
         }
 
@@ -174,6 +181,26 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         }
 
         return messageBuilder.toString()
+    }
+
+    fun initCustomization(id: Int, originalQuery: Message?, chat: Chat) {
+        var reply = SendableTextMessage.builder()
+                .message("Initializing...")
+        var hide = ReplyKeyboardHide.builder()
+
+        if (originalQuery != null) {
+            hide.selective(true)
+            reply.replyTo(originalQuery)
+        }
+
+        reply.replyMarkup(hide.build())
+        chat.sendMessage(reply.build())
+        var response = SendableTextMessage.builder()
+                .message("How would you like to customize your video?")
+                .replyMarkup(videoKeyboardFor(id))
+                .build()
+
+        videoSessions.get(id)!!.botMessageId = chat.sendMessage(response).messageId // next step is processVideoInline()
     }
 
     override fun onCommandMessageReceived(event: CommandMessageReceivedEvent?) {
@@ -420,7 +447,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             return
         }
 
-        sendVideo(event.chat, link, false, event.message, userId, null, duration)
+        sendVideo(event.chat, link, false, event.message, userId, null, duration, titleCache.asMap()[selected.videoId]!!)
     }
 
 
@@ -483,7 +510,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             var duration = instance.preconditionVideo(link, chat, false)
 
             if (duration != -1L) {
-                sendVideo(chat, link, true, message, userId, null, duration)
+                sendVideo(chat, link, true, message, userId, null, duration, titleCache.asMap()[videoMatcher.group(1)]!!)
             }
 
             return
@@ -503,7 +530,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
     }
 
     fun processSearch(chat: Chat, query: String, userId: Long, originalMessage: Message) {
-        var response = instance.search(query)
+        var response = instance.searchVideo(query)
 
         if (response.items == null || response.items.isEmpty()) {
             chat.sendMessage("No videos were found by that query!")

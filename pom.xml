@@ -33,6 +33,12 @@
             <artifactId>google-api-services-youtube</artifactId>
             <version>v3-rev165-1.21.0</version>
         </dependency>
+
+        <dependency>
+            <groupId>de.u-mass</groupId>
+            <artifactId>lastfm-java</artifactId>
+            <version>0.1.2</version>
+        </dependency>
     </dependencies>
 
     <build>

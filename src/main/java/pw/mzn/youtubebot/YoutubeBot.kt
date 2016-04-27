@@ -6,6 +6,7 @@ import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.services.youtube.YouTube
 import com.google.api.services.youtube.model.SearchListResponse
 import com.mashape.unirest.http.Unirest
+import de.umass.lastfm.Track
 import pro.zackpollard.telegrambot.api.TelegramBot
 import pro.zackpollard.telegrambot.api.chat.Chat
 import java.io.File
@@ -21,8 +22,9 @@ import java.util.regex.Pattern
 import kotlin.properties.Delegates
 import kotlin.system.exitProcess
 
-class YoutubeBot(val key: String, val youtubeKey: String) {
+class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String) {
     val executor = Executors.newFixedThreadPool(2)
+    val titleRegex = Pattern.compile("\\[(.*?)\\]")
     val playlistRegex = Pattern.compile("^.*(youtu\\.be\\/|list=)([^#&?]*).*")
     val videoRegex = Pattern.compile("^(?:https?:\\/\\/)?(?:www\\.)?(?:youtube\\.com|youtu\\.be)\\/watch\\?v=([^&]+)")
     val executable = File("youtube-dl")
@@ -64,7 +66,7 @@ class YoutubeBot(val key: String, val youtubeKey: String) {
         println("Finished downloading youtube-dl executable")
     }
 
-    fun search(query: String): SearchListResponse {
+    fun searchVideo(query: String): SearchListResponse {
         var search = youtube.search().list("id,snippet")
 
         search.key = youtubeKey
@@ -183,7 +185,7 @@ class YoutubeBot(val key: String, val youtubeKey: String) {
         regex.lookingAt()
 
         search.id = regex.group(1)
-        search.fields = "items(contentDetails/duration, snippet/thumbnails/medium/url)"
+        search.fields = "items(contentDetails/duration, snippet/thumbnails/medium/url, snippet/title)"
         search.key = youtubeKey
         var response = search.execute()
 
@@ -194,7 +196,9 @@ class YoutubeBot(val key: String, val youtubeKey: String) {
             return -1L
         }
 
-        var duration = parse8601Duration(response.items[0].contentDetails.duration)
+        var item = response.items[0]
+
+        var duration = parse8601Duration(item.contentDetails.duration)
 
         if (duration > 3600L) {
             if (!silent) {
@@ -203,10 +207,23 @@ class YoutubeBot(val key: String, val youtubeKey: String) {
             return -1L
         }
 
-        if (!commandHandler.thumbnails.containsKey(search.id))
-            commandHandler.thumbnails.put(search.id, response.items[0].snippet.thumbnails.medium.url)
+        if (!commandHandler.thumbnails.containsKey(search.id)) {
+            commandHandler.thumbnails.put(search.id, item.snippet.thumbnails.medium.url)
+        }
+
+        if (!commandHandler.titleCache.asMap().containsKey(search.id)) {
+            commandHandler.titleCache.put(search.id, item.snippet.title)
+        }
 
         return duration
+    }
+
+    fun searchTrack(title: String): MutableCollection<Track> {
+        return Track.search(cleanTitle(title), lastFmKey)
+    }
+
+    fun cleanTitle(title: String): String {
+        return title.replace(titleRegex.toRegex(), "").trim()
     }
 }
 
@@ -341,8 +358,6 @@ class PlaylistCallable(val options: PlaylistOptions, val id: String, val instanc
 
 /************************
         TODO List
- - Use last.fm API to immediately fetch data such as performer, title, and
-   cover art without the user having to do the work themselves
  - (Big one) Allow users to link the bot to a playlist and have all their
    downloaded videos be added to the playlist, and use the bot as a "player"
    being able to index through the playlist and select the song they want.

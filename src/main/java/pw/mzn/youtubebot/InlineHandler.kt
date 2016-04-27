@@ -1,5 +1,6 @@
 package pw.mzn.youtubebot
 
+import de.umass.lastfm.ImageSize
 import pro.zackpollard.telegrambot.api.chat.CallbackQuery
 import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage
 import pro.zackpollard.telegrambot.api.event.Listener
@@ -33,6 +34,10 @@ class InlineHandler(val instance: YoutubeBot): Listener {
             processVideoInline(callback, data)
             return
         }
+
+        if (data.startsWith("lf.") && handler.trackStore.containsKey(callback.from.id)) {
+            processTrackInline(callback, data)
+        }
     }
 
     fun <T> fetchSession(data: String, index: Int, minSize: Int, list: IdList<T>): T? {
@@ -63,7 +68,8 @@ class InlineHandler(val instance: YoutubeBot): Listener {
         callback.answer("Selecting...", false)
 
         if (data.startsWith("v.")) {
-            handler.sendVideo(session.chat, "https://www.youtube.com/watch?v=${session.videoMatch}", true, session.originalMessage, session.userId, null, session.duration)
+            handler.sendVideo(session.chat, "https://www.youtube.com/watch?v=${session.videoMatch}", true, session.originalMessage, session.userId, null, session.duration,
+                    handler.titleCache.asMap()[session.videoMatch]!!)
         } else {
             handler.sendPlaylist(session.chat, "https://www.youtube.com/playlist?list=${session.playlistMatch}", null, session.userId, session.playlistVideos)
         }
@@ -78,7 +84,8 @@ class InlineHandler(val instance: YoutubeBot): Listener {
         if ("p".equals(selection)) { // exit route
             callback.answer("Sending to processing queue...", false)
             session.options.thumbnailUrl = session.thumbnail
-            handler.sendVideo(session.chat, session.link, session.linkSent, session.originalQuery, session.userId, session.options, session.duration)
+            handler.sendVideo(session.chat, session.link, session.linkSent, session.originalQuery, session.userId,
+                    session.options, session.duration, handler.titleCache.asMap()[session.videoId]!!)
             return
         }
 
@@ -142,5 +149,30 @@ class InlineHandler(val instance: YoutubeBot): Listener {
         }
 
         // sn & sh move their next data processing to processPlaylistMessage
+    }
+
+    fun processTrackInline(callback: CallbackQuery, data: String) {
+        if (data.split(".").size != 2) {
+            return
+        }
+
+        var selected = "y".equals(data.split(".")[1])
+        var trackSession = handler.trackStore[callback.from.id]!!
+        var options = trackSession.videoSession.options
+        var track = trackSession.track
+
+        if (selected) {
+            options.customTitle = track.name
+            options.customPerformer = track.artist
+            var imageUrl = track.getImageURL(ImageSize.ORIGINAL)
+
+            if (!"".equals(imageUrl)) {
+                options.thumbnail = true
+                options.thumbnailUrl = imageUrl
+            }
+        }
+
+        var id = handler.videoSessions.add(trackSession.videoSession)
+        handler.initCustomization(id, trackSession.videoSession.originalQuery, trackSession.videoSession.chat)
     }
 }

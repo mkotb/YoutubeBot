@@ -1,5 +1,6 @@
 package pw.mzn.youtubebot
 
+import de.umass.lastfm.Track
 import pro.zackpollard.telegrambot.api.chat.Chat
 import pro.zackpollard.telegrambot.api.chat.message.Message
 
@@ -23,5 +24,7 @@ data class VideoSession(val instance: YoutubeBot, val chatId: String, val link: 
         videoId = regex.group(1)
     }
 }
+
+data class TrackSession(val videoSession: VideoSession, val track: Track)
 
 data class CachedYoutubeVideo(val videoId: String, val title: String)
