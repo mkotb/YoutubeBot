@@ -531,7 +531,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         userSearch.put(userId, cachedVids)
         var message = SendableTextMessage.builder()
-                .message("Please select the one of the following")
+                .message("Select a Video")
                 .replyMarkup(keyboard.build())
                 .replyTo(originalMessage)
                 .build()

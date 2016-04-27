@@ -341,8 +341,8 @@ class PlaylistCallable(val options: PlaylistOptions, val id: String, val instanc
 
 /************************
         TODO List
- - Inline (using audio as preview)
- - Cleaning up messages to be more friendly
+ - Use last.fm API to immediately fetch data such as performer, title, and
+   cover art without the user having to do the work themselves
  - (Big one) Allow users to link the bot to a playlist and have all their
    downloaded videos be added to the playlist, and use the bot as a "player"
    being able to index through the playlist and select the song they want.
