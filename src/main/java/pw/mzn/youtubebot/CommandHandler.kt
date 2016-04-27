@@ -39,7 +39,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
     fun sendVideo(chat: Chat, link: String, linkSent: Boolean, originalQuery: Message?, userId: Long,
                   optionz: VideoOptions?, duration: Long, title: String) {
-        var search = instance.searchTrack(title).toMutableList()
+        /*var search = instance.searchTrack(title).toMutableList()
 
         if (((chat is GroupChat) || optionz == null) && !search.isEmpty()) {
             var track = search[0]
@@ -54,7 +54,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             trackStore.put(userId, TrackSession(session, track))
 
             return
-        }
+        }*/
 
         if ((chat !is GroupChat) && optionz == null) {
             var id = videoSessions.add(VideoSession(instance, chat.id, link, VideoOptions(0, duration), chat, linkSent, userId, originalQuery, duration))
