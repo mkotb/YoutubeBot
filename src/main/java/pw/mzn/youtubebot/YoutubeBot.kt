@@ -25,7 +25,7 @@ import kotlin.system.exitProcess
 
 class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String) {
     val executor = Executors.newFixedThreadPool(2)
-    val titleRegex = Pattern.compile("\\[(.*?)\\]")
+    val titleRegex = Pattern.compile("(\\[|\\()(.*?)(\\]|\\))")
     val playlistRegex = Pattern.compile("^.*(youtu\\.be\\/|list=)([^#&?]*).*")
     val videoRegex = Pattern.compile("^(?:https?:\\/\\/)?(?:www\\.)?(?:youtube\\.com|youtu\\.be)\\/watch\\?v=([^&]+)")
     val executable = File("youtube-dl")
