@@ -9,6 +9,7 @@ import pro.zackpollard.telegrambot.api.event.chat.CallbackQueryReceivedEvent
 import pro.zackpollard.telegrambot.api.keyboards.KeyboardButton
 import pro.zackpollard.telegrambot.api.keyboards.ReplyKeyboardMarkup
 import java.io.File
+import java.net.URL
 
 class InlineHandler(val instance: YoutubeBot): Listener {
     var handler = instance.commandHandler
@@ -174,7 +175,7 @@ class InlineHandler(val instance: YoutubeBot): Listener {
                 message += ", and thumbnail for you! Here is a preview of the thumbnail:"
                 trackSession.videoSession.chat.sendMessage(message)
                 trackSession.videoSession.chat.sendMessage(SendablePhotoMessage.builder()
-                        .photo(InputFile(imageUrl))
+                        .photo(InputFile(URL(imageUrl)))
                         .build())
                 println(imageUrl)
             } else {
