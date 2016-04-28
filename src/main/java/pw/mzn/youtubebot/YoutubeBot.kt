@@ -6,7 +6,8 @@ import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.services.youtube.YouTube
 import com.google.api.services.youtube.model.SearchListResponse
 import com.mashape.unirest.http.Unirest
-import de.umass.lastfm.Track
+import org.json.JSONArray
+import org.json.JSONObject
 import pro.zackpollard.telegrambot.api.TelegramBot
 import pro.zackpollard.telegrambot.api.chat.Chat
 import java.io.File
@@ -219,7 +220,41 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
     }
 
     fun searchTrack(title: String): MutableCollection<Track> {
-        return Track.search(cleanTitle(title), lastFmKey)
+        var response = Unirest.get("https://ws.audioscrobbler.com/2.0/")
+                .queryString("method", "track.search")
+                .queryString("track", cleanTitle(title))
+                .queryString("api_key", lastFmKey)
+                .queryString("format", "json")
+                .asJson()
+
+        if (response.status != 200) {
+            return ArrayList()
+        }
+
+        var matches = response.body.`object`
+                .getJSONObject("results")
+                .getJSONObject("trackmatches")
+                .getJSONArray("track")
+        var list = ArrayList<Track>(matches.length())
+
+        matches.forEach { e -> run {
+            if (e is JSONObject) {
+                list.add(Track(e.getString("name"), e.getString("artist"),
+                        coverFrom(e.getJSONArray("image"))))
+            }
+        } }
+
+        return list
+    }
+
+    private fun coverFrom(obj: JSONArray): String {
+        var cover = ""
+
+        obj.forEach { e -> if (e is JSONObject && "medium".equals(e.getString("size"))) {
+            cover = e.getString("#text")
+        } }
+
+        return cover
     }
 
     fun cleanTitle(title: String): String {
@@ -355,6 +390,8 @@ class PlaylistCallable(val options: PlaylistOptions, val id: String, val instanc
         return playlist
     }
 }
+
+data class Track(val name: String, val artist: String, val coverUrl: String)
 
 /************************
         TODO List

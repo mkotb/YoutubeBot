@@ -1,7 +1,8 @@
 package pw.mzn.youtubebot
 
-import de.umass.lastfm.ImageSize
 import pro.zackpollard.telegrambot.api.chat.CallbackQuery
+import pro.zackpollard.telegrambot.api.chat.message.send.InputFile
+import pro.zackpollard.telegrambot.api.chat.message.send.SendablePhotoMessage
 import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage
 import pro.zackpollard.telegrambot.api.event.Listener
 import pro.zackpollard.telegrambot.api.event.chat.CallbackQueryReceivedEvent
@@ -162,13 +163,22 @@ class InlineHandler(val instance: YoutubeBot): Listener {
         var track = trackSession.track
 
         if (selected) {
+            var message = "Set the title, performer"
             options.customTitle = track.name
             options.customPerformer = track.artist
-            var imageUrl = track.getImageURL(ImageSize.ORIGINAL)
+            var imageUrl = track.coverUrl
 
             if (!"".equals(imageUrl)) {
                 options.thumbnail = true
                 options.thumbnailUrl = imageUrl
+                message += ", and thumbnail for you! Here is a preview of the thumbnail:"
+                trackSession.videoSession.chat.sendMessage(message)
+                trackSession.videoSession.chat.sendMessage(SendablePhotoMessage.builder()
+                        .photo(InputFile(imageUrl))
+                        .build())
+            } else {
+                message += " for you!"
+                trackSession.videoSession.chat.sendMessage(message)
             }
         }
 

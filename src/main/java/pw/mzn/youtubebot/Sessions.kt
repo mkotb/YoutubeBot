@@ -1,6 +1,5 @@
 package pw.mzn.youtubebot
 
-import de.umass.lastfm.Track
 import pro.zackpollard.telegrambot.api.chat.Chat
 import pro.zackpollard.telegrambot.api.chat.message.Message
 
