@@ -171,6 +171,7 @@ class InlineHandler(val instance: YoutubeBot): Listener {
 
             if (!"".equals(imageUrl)) {
                 options.thumbnailUrl = imageUrl
+                options.thumbnail = true
                 trackSession.videoSession.thumbnail = imageUrl
                 message += ", and thumbnail for you! Here is a preview of the thumbnail:"
                 trackSession.videoSession.chat.sendMessage(message)
