@@ -91,6 +91,12 @@ class InlineHandler(val instance: YoutubeBot): Listener {
             return
         }
 
+        if ("c".equals(selection)) {
+            callback.answer("Cancelling operation...", false)
+            handler.flushSessions(session.userId, session.chatId)
+            return
+        }
+
         if ("tn".equals(selection)) {
             if (session.options.thumbnail) {
                 callback.answer("Disabling thumbnail...", false)

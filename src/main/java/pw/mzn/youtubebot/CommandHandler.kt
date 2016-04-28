@@ -9,9 +9,7 @@ import pro.zackpollard.telegrambot.api.chat.message.Message
 import pro.zackpollard.telegrambot.api.chat.message.content.TextContent
 import pro.zackpollard.telegrambot.api.chat.message.send.*
 import pro.zackpollard.telegrambot.api.event.Listener
-import pro.zackpollard.telegrambot.api.event.chat.CallbackQueryReceivedEvent
 import pro.zackpollard.telegrambot.api.event.chat.message.CommandMessageReceivedEvent
-import pro.zackpollard.telegrambot.api.event.chat.message.PhotoMessageReceivedEvent
 import pro.zackpollard.telegrambot.api.event.chat.message.TextMessageReceivedEvent
 import pro.zackpollard.telegrambot.api.keyboards.*
 import java.io.File
@@ -47,6 +45,11 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                     .addRow(InlineKeyboardButton.builder().text("Yes").callbackData("lf.y").build(),
                             InlineKeyboardButton.builder().text("No").callbackData("lf.n").build()).build()
 
+            chat.sendMessage(SendableTextMessage.builder()
+                    .replyTo(originalQuery!!)
+                    .message("Searching DB for song match...")
+                    .replyMarkup(ReplyKeyboardHide.builder().selective(true).build())
+                    .build())
             chat.sendMessage(SendableTextMessage.builder()
                     .message("Is this song ${track.name} by ${track.artist}?")
                     .replyMarkup(replyKeyboard).build())
@@ -439,6 +442,14 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             return
         }
 
+        if ("Cancel".equals(event.content.content)) {
+            flushSessions(userId, event.chat.id)
+            event.chat.sendMessage(SendableTextMessage.builder()
+                    .message("Cancelled!")
+                    .replyMarkup(ReplyKeyboardHide.builder().selective(true).build()).build())
+            return
+        }
+
         var link = "https://www.youtube.com/watch?v=${selected.videoId}"
         var duration = instance.preconditionVideo(link, event.chat, false)
 
@@ -553,6 +564,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             keyboard.addRow(KeyboardButton.builder().text(title).build())
         }
 
+        keyboard.addRow(KeyboardButton.builder().text("Cancel").build())
         keyboard.selective(true)
 
         userSearch.put(userId, cachedVids)
@@ -605,7 +617,9 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                                              .callbackData("vd.te.$id").build(),
                         InlineKeyboardButton.builder().text("Change Performer")
                                              .callbackData("vd.pr.$id").build())
-                .addRow(InlineKeyboardButton.builder().text("Send to Processing...")
+                .addRow(InlineKeyboardButton.builder().text("Cancel")
+                                             .callbackData("vd.c.$id").build(),
+                        InlineKeyboardButton.builder().text("Send to Processing...")
                                              .callbackData("vd.p.$id").build())
                 .build()
     }
