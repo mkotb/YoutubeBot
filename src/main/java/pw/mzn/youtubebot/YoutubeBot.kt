@@ -239,7 +239,6 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
 
         matches.forEach { e -> run {
             if (e is JSONObject && list.size < 1) {
-                println("looking for ${e.getString("mbid")}")
                 list.add(Track(e.getString("name"), e.getString("artist"),
                         albumCover(e)))
             }
@@ -256,7 +255,6 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
                 .queryString("api_key", lastFmKey)
                 .queryString("format", "json")
                 .asJson().body.`object`
-        println("dumping track response $response")
         var trackInfo = response.getJSONObject("track")
 
         if (!trackInfo.has("album")) {
