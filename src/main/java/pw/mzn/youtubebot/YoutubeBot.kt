@@ -239,6 +239,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
 
         matches.forEach { e -> run {
             if (e is JSONObject) {
+                println("looking for ${e.getString("mbid")}")
                 list.add(Track(e.getString("name"), e.getString("artist"),
                         albumCover(e.getString("mbid"), e.getJSONArray("image"))))
             }
@@ -248,13 +249,14 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
     }
 
     private fun albumCover(mbid: String, backup: JSONArray): String {
-        var trackInfo = Unirest.get("https://ws.audioscrobbler.com/2.0/")
+        var response = Unirest.get("https://ws.audioscrobbler.com/2.0/")
                 .queryString("method", "track.getInfo")
                 .queryString("mbid", mbid)
                 .queryString("api_key", lastFmKey)
                 .queryString("format", "json")
                 .asJson().body.`object`
-                .getJSONObject("track")
+        println("dumping track response $response")
+        var trackInfo = response.getJSONObject("track")
 
         if (!trackInfo.has("album")) {
             return coverFrom(backup)
