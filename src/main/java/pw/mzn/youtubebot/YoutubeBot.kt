@@ -248,10 +248,11 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
         return list
     }
 
-    private fun albumCover(mbid: String, backup: JSONArray): String {
+    private fun albumCover(e: JSONObject): String {
         var response = Unirest.get("https://ws.audioscrobbler.com/2.0/")
                 .queryString("method", "track.getInfo")
-                .queryString("mbid", mbid)
+                .queryString("track", e.getString("name"))
+                .queryString("artist", e.getString("artist"))
                 .queryString("api_key", lastFmKey)
                 .queryString("format", "json")
                 .asJson().body.`object`
@@ -259,15 +260,15 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
         var trackInfo = response.getJSONObject("track")
 
         if (!trackInfo.has("album")) {
-            return coverFrom(backup)
+            return coverFrom(e.getJSONArray("image"))
         }
 
-        var albumMbid = trackInfo.getJSONObject("album")
-                .getString("mbid")
+        var album = trackInfo.getJSONObject("album")
 
         return coverFrom(Unirest.get("https://ws.audioscrobbler.com/2.0/")
                 .queryString("method", "album.getInfo")
-                .queryString("mbid", albumMbid)
+                .queryString("artist", album.getString("artist"))
+                .queryString("album", album.getString("title"))
                 .queryString("api_key", lastFmKey)
                 .queryString("format", "json")
                 .asJson().body.`object`
