@@ -250,7 +250,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
     private fun coverFrom(obj: JSONArray): String {
         var cover = ""
 
-        obj.forEach { e -> if (e is JSONObject && "medium".equals(e.getString("size"))) {
+        obj.forEach { e -> if (e is JSONObject && "extralarge".equals(e.getString("size"))) {
             cover = e.getString("#text")
         } }
 
