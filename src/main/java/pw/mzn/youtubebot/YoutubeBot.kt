@@ -241,7 +241,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
             if (e is JSONObject) {
                 println("looking for ${e.getString("mbid")}")
                 list.add(Track(e.getString("name"), e.getString("artist"),
-                        albumCover(e.getString("mbid"), e.getJSONArray("image"))))
+                        albumCover(e)))
             }
         } }
 
