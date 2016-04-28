@@ -176,6 +176,7 @@ class InlineHandler(val instance: YoutubeBot): Listener {
                 trackSession.videoSession.chat.sendMessage(SendablePhotoMessage.builder()
                         .photo(InputFile(imageUrl))
                         .build())
+                println(imageUrl)
             } else {
                 message += " for you!"
                 trackSession.videoSession.chat.sendMessage(message)
