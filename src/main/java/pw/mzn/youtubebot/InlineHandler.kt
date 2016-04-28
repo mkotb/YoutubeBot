@@ -101,6 +101,8 @@ class InlineHandler(val instance: YoutubeBot): Listener {
                 }
 
                 session.options.thumbnail = false
+                instance.bot.editMessageReplyMarkup(session.chatId, session.botMessageId, handler
+                        .videoKeyboardFor(data.split(".")[2].toInt()))
             } else {
                 callback.answer("Please answer the following question accordingly...", false)
                 var replyKeyboard = ReplyKeyboardMarkup.builder()

@@ -354,7 +354,12 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
         if (options.thumbnail) {
             println("Setting thumbnail...")
             if (!"N/A".equals(options.thumbnailUrl)) {
+                var file = File("$id.jpg")
                 var res = Unirest.get(options.thumbnailUrl).asBinary()
+
+                if (file.exists())
+                    file.delete()
+
                 Files.copy(res.body, Paths.get("$id.jpg"))
             }
 
