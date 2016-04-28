@@ -238,7 +238,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
         var list = ArrayList<Track>(matches.length())
 
         matches.forEach { e -> run {
-            if (e is JSONObject) {
+            if (e is JSONObject && list.size < 1) {
                 println("looking for ${e.getString("mbid")}")
                 list.add(Track(e.getString("name"), e.getString("artist"),
                         albumCover(e)))
