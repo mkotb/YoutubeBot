@@ -262,12 +262,12 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         var query = event.content.content
 
-        if (query.contains("@YTDL_Bot") && !query.startsWith("@YTDL_Bot")) {
+        if (query.contains("@YoutubeMusic_Bot") && !query.startsWith("@YoutubeMusic_Bot")) {
             return // probably just a mention, not a search
         }
 
-        if (query.startsWith("@YTDL_Bot")) { // group chats
-            query = query.replace("@YTDL_Bot ", "")
+        if (query.startsWith("@YoutubeMusic_Bot")) { // group chats
+            query = query.replace("@YoutubeMusic_Bot ", "")
         }
 
         processInput(query,event.chat, event.message)
