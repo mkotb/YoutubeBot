@@ -12,7 +12,7 @@ data class PlaylistSession(val chatId: String, val options: PlaylistOptions = Pl
                            val userId: Long, val videoCount: Long)
 
 data class VideoSession(val instance: YoutubeBot, val chatId: String, val link: String, val options: VideoOptions = VideoOptions(),
-                        val chat: Chat, val userId: Long,
+                        val chat: Chat, val linkSent: Boolean, val userId: Long,
                         val originalQuery: Message?, val duration: Long, var thumbnail: String = "N/A", var selecting: String = "N/A",
                         var botMessageId: Long = -1L, var pendingImage: Boolean = false) {
     val videoId: String
