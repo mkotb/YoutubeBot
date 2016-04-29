@@ -70,7 +70,7 @@ class InlineHandler(val instance: YoutubeBot): Listener {
         callback.answer("Selecting...", false)
 
         if (data.startsWith("v.")) {
-            handler.sendVideo(session.chat, "https://www.youtube.com/watch?v=${session.videoMatch}", true, session.originalMessage, session.userId, null, session.duration,
+            handler.sendVideo(session.chat, "https://www.youtube.com/watch?v=${session.videoMatch}", session.originalMessage, session.userId, null, session.duration,
                     handler.titleCache.asMap()[session.videoMatch]!!)
         } else {
             handler.sendPlaylist(session.chat, "https://www.youtube.com/playlist?list=${session.playlistMatch}", null, session.userId, session.playlistVideos)
@@ -86,7 +86,7 @@ class InlineHandler(val instance: YoutubeBot): Listener {
         if ("p".equals(selection)) { // exit route
             callback.answer("Sending to processing queue...", false)
             session.options.thumbnailUrl = session.thumbnail
-            handler.sendVideo(session.chat, session.link, session.linkSent, session.originalQuery, session.userId,
+            handler.sendVideo(session.chat, session.link, session.originalQuery, session.userId,
                     session.options, session.duration, handler.titleCache.asMap()[session.videoId]!!)
             return
         }

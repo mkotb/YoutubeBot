@@ -34,13 +34,13 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             .expireAfterWrite(8, TimeUnit.HOURS)
             .build<String, String>() // key = video id, val = title
 
-    fun sendVideo(chat: Chat, link: String, linkSent: Boolean, originalQuery: Message?, userId: Long,
+    fun sendVideo(chat: Chat, link: String, originalQuery: Message?, userId: Long,
                   optionz: VideoOptions?, duration: Long, title: String) {
         var search = instance.searchTrack(title).toMutableList()
 
         if (((chat is GroupChat) || optionz == null) && !search.isEmpty()) {
             var track = search[0]
-            var session = VideoSession(instance, chat.id, link, VideoOptions(0, duration), chat, linkSent, userId, originalQuery, duration)
+            var session = VideoSession(instance, chat.id, link, VideoOptions(0, duration), chat, userId, originalQuery, duration)
             var replyKeyboard = InlineKeyboardMarkup.builder()
                     .addRow(InlineKeyboardButton.builder().text("Yes").callbackData("lf.y").build(),
                             InlineKeyboardButton.builder().text("No").callbackData("lf.n").build()).build()
@@ -59,7 +59,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         }
 
         if ((chat !is GroupChat) && optionz == null) {
-            var id = videoSessions.add(VideoSession(instance, chat.id, link, VideoOptions(0, duration), chat, linkSent, userId, originalQuery, duration))
+            var id = videoSessions.add(VideoSession(instance, chat.id, link, VideoOptions(0, duration), chat, userId, originalQuery, duration))
             initCustomization(id, originalQuery, chat)
             return
         }
@@ -83,7 +83,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         regex.matches()
         var video = instance.downloadVideo(options, regex.group(1))
         var md = SendableTextMessage.builder()
-                .message(descriptionFor(video, linkSent))
+                .message(descriptionFor(video))
                 .parseMode(ParseMode.MARKDOWN)
 
         if (originalQuery != null) {
@@ -157,7 +157,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         for (video in playlist.videoList) {
             var md = chat.sendMessage(SendableTextMessage.builder()
-                    .message(descriptionFor(video, true))
+                    .message(descriptionFor(video))
                     .parseMode(ParseMode.MARKDOWN)
                     .build())
             chat.sendMessage(video.sendable().replyTo(md).build())
@@ -169,7 +169,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         removePlaylistSession(chat.id)
     }
 
-    fun descriptionFor(video: YoutubeVideo, linkSent: Boolean): String {
+    fun descriptionFor(video: YoutubeVideo): String {
         var metadata = video.metadata
         var messageBuilder = StringBuilder("*${metadata.name}*\n")
 
@@ -177,10 +177,6 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         messageBuilder.append("*Views:* ${NumberFormat.getInstance().format(metadata.viewCount)}\n")
         messageBuilder.append("👍 ${NumberFormat.getInstance().format(metadata.likes)}\n")
         messageBuilder.append("👎 ${NumberFormat.getInstance().format(metadata.dislikes)}\n")
-
-        if (!linkSent) {
-            messageBuilder.append("[Watch here!](${metadata.url})\n")
-        }
 
         return messageBuilder.toString()
     }
@@ -457,7 +453,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             return
         }
 
-        sendVideo(event.chat, link, false, event.message, userId, null, duration, titleCache.asMap()[selected.videoId]!!)
+        sendVideo(event.chat, link, event.message, userId, null, duration, titleCache.asMap()[selected.videoId]!!)
     }
 
 
@@ -520,7 +516,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             var duration = instance.preconditionVideo(link, chat, false)
 
             if (duration != -1L) {
-                sendVideo(chat, link, true, message, userId, null, duration, titleCache.asMap()[videoMatcher.group(1)]!!)
+                sendVideo(chat, link, message, userId, null, duration, titleCache.asMap()[videoMatcher.group(1)]!!)
             }
 
             return
