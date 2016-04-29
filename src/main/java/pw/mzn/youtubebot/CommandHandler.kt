@@ -549,7 +549,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         }
 
         var keyboard = ReplyKeyboardMarkup.builder()
-        var max = response.size
+        var max = response.size - 1
 
         if (max > 5) {
             max = 5
