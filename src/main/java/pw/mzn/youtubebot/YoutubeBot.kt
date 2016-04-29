@@ -295,7 +295,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
                 .queryString("q", query)
                 .queryString("key", googleKeys[nextKeyIndex()])
                 .queryString("searchType", "image")
-                .queryString("imgSize", "medium")
+                .queryString("imgSize", "large")
                 .queryString("cx", "000917504380048684589:konlxv5xaaw")
                 .queryString("num", "2").asJson()
                 .body.`object`
