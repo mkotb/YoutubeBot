@@ -82,8 +82,10 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
         response.forEach { e ->
             if (e is JSONObject) {
                 var matcher = videoRegex.matcher(e.getString("link"))
-                matcher.matches()
-                videos.add(CachedYoutubeVideo(matcher.group(1), e.getString("title")))
+
+                if (matcher.matches()) {
+                    videos.add(CachedYoutubeVideo(matcher.group(1), e.getString("title")))
+                }
             }
         }
 
