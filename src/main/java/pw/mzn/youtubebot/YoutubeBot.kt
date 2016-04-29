@@ -69,17 +69,25 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
         println("Finished downloading youtube-dl executable")
     }
 
-    fun searchVideo(query: String): SearchListResponse {
-        var search = youtube.search().list("id,snippet")
+    fun searchVideo(query: String): List<CachedYoutubeVideo> {
+        var videos = ArrayList<CachedYoutubeVideo>(4)
+        var response = Unirest.get("https://www.googleapis.com/customsearch/v1")
+                .queryString("q", query)
+                .queryString("key", googleKeys[keyIndex])
+                .queryString("cx", "000917504380048684589:konlxv5xaaw")
+                .queryString("siteSearch", "youtube.com")
+                .queryString("num", 2)
+                .asJson().body.`object`.getJSONArray("items")
 
-        search.key = youtubeKey
-        search.q = query
-        search.type = "video"
-        search.videoDuration = "short"
-        search.fields = "items(id/kind,id/videoId,snippet/title,snippet/thumbnails/default/url,snippet/channelTitle)"
-        search.maxResults = 10
+        response.forEach { e ->
+            if (e is JSONObject) {
+                var matcher = videoRegex.matcher(e.getString("link"))
+                matcher.matches()
+                videos.add(CachedYoutubeVideo(matcher.group(1), e.getString("title")))
+            }
+        }
 
-        return search.execute()
+        return videos
     }
 
     fun downloadVideo(options: VideoOptions, id: String): YoutubeVideo {

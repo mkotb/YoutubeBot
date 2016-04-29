@@ -1,7 +1,6 @@
 package pw.mzn.youtubebot
 
 import com.google.common.cache.CacheBuilder
-import pro.zackpollard.telegrambot.api.chat.CallbackQuery
 import pro.zackpollard.telegrambot.api.chat.Chat
 import pro.zackpollard.telegrambot.api.chat.GroupChat
 import pro.zackpollard.telegrambot.api.chat.SuperGroupChat
@@ -43,7 +42,8 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             var session = VideoSession(instance, chat.id, link, VideoOptions(0, duration), chat, linkSent, userId, originalQuery, duration)
             var replyKeyboard = InlineKeyboardMarkup.builder()
                     .addRow(InlineKeyboardButton.builder().text("Yes").callbackData("lf.y").build(),
-                            InlineKeyboardButton.builder().text("No").callbackData("lf.n").build()).build()
+                            InlineKeyboardButton.builder().text("No").callbackData("lf.n").build())
+                    .build()
 
             chat.sendMessage(SendableTextMessage.builder()
                     .replyTo(originalQuery!!)
@@ -543,13 +543,13 @@ class CommandHandler(val instance: YoutubeBot): Listener {
     fun processSearch(chat: Chat, query: String, userId: Long, originalMessage: Message) {
         var response = instance.searchVideo(query)
 
-        if (response.items == null || response.items.isEmpty()) {
+        if (response.isEmpty()) {
             chat.sendMessage("No videos were found by that query!")
             return
         }
 
         var keyboard = ReplyKeyboardMarkup.builder()
-        var max = response.items.size
+        var max = response.size
 
         if (max > 5) {
             max = 5
@@ -558,10 +558,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         var cachedVids = ArrayList<CachedYoutubeVideo>()
 
         for (i in 0..max) {
-            var entry = response.items[i]
-            var title = entry.snippet.title + " by ${entry.snippet.channelTitle}"
+            var entry = response[i]
+            var title = entry.title
 
-            cachedVids.add(CachedYoutubeVideo(entry.id.videoId, title))
+            cachedVids.add(entry)
             keyboard.addRow(KeyboardButton.builder().text(title).build())
         }
 
