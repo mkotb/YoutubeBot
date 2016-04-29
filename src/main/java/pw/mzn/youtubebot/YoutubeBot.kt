@@ -29,9 +29,11 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
     val playlistRegex = Pattern.compile("^.*(youtu\\.be\\/|list=)([^#&?]*).*")
     val videoRegex = Pattern.compile("^(?:https?:\\/\\/)?(?:www\\.)?(?:youtube\\.com|youtu\\.be)\\/watch\\?v=([^&]+)")
     val executable = File("youtube-dl")
+    val googleKeys = Files.readAllLines(Paths.get("gm_keys"))
     val commandHandler = CommandHandler(this)
     var bot: TelegramBot by Delegates.notNull()
     var youtube: YouTube by Delegates.notNull()
+    var keyIndex = 0
 
     fun init() {
         downloadExecutable()
@@ -258,7 +260,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
         var trackInfo = response.getJSONObject("track")
 
         if (!trackInfo.has("album")) {
-            return coverFrom(e.getJSONArray("image"))
+            return searchImage("${e.getString("name")} ${e.getString("artist")} album cover")
         }
 
         var album = trackInfo.getJSONObject("album")
@@ -286,6 +288,28 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
 
     fun cleanTitle(title: String): String {
         return title.replace(titleRegex.toRegex(), "").trim()
+    }
+
+    fun searchImage(query: String): String {
+        return (Unirest.get("https://www.googleapis.com/customsearch/v1")
+                .queryString("q", query)
+                .queryString("key", googleKeys[nextKeyIndex()])
+                .queryString("searchType", "image")
+                .queryString("imgSize", "medium")
+                .queryString("cx", "000917504380048684589:konlxv5xaaw")
+                .queryString("num", "2").asJson()
+                .body.`object`
+                .getJSONArray("items")[0] as JSONObject).getString("link")
+    }
+
+    private fun nextKeyIndex(): Int {
+        var toReturn = keyIndex++
+
+        if (keyIndex == googleKeys.size) {
+            keyIndex = 0
+        }
+
+        return toReturn
     }
 }
 
@@ -427,7 +451,6 @@ data class Track(val name: String, val artist: String, val coverUrl: String)
 
 /************************
         TODO List
- - Cancel buttons
  - Possibly use google image search if the track info doesn't have an album from last.fm (see: line 261)
    If done, make sure to lock resolution searches to 300x300
    Steal the code for it from https://github.com/bo0tzz/ImageFetchBot/blob/master/src/main/java/com/bo0tzz/imagebot/ImageCommandListener.java
