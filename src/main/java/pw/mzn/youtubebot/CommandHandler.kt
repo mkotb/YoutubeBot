@@ -84,6 +84,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         var video = instance.downloadVideo(options, regex.group(1))
         var md = SendableTextMessage.builder()
                 .message(descriptionFor(video, linkSent))
+                .disableWebPagePreview(true)
                 .parseMode(ParseMode.MARKDOWN)
 
         if (originalQuery != null) {

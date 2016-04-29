@@ -451,9 +451,6 @@ data class Track(val name: String, val artist: String, val coverUrl: String)
 
 /************************
         TODO List
- - Possibly use google image search if the track info doesn't have an album from last.fm (see: line 261)
-   If done, make sure to lock resolution searches to 300x300
-   Steal the code for it from https://github.com/bo0tzz/ImageFetchBot/blob/master/src/main/java/com/bo0tzz/imagebot/ImageCommandListener.java
  - (Big one) Allow users to link the bot to a playlist and have all their
    downloaded videos be added to the playlist, and use the bot as a "player"
    being able to index through the playlist and select the song they want.
