@@ -12,7 +12,9 @@ import java.util.*
 class InlineTagHandler(val instance: YoutubeBot): Listener {
     override fun onInlineQueryReceived(event: InlineQueryReceivedEvent?) {
         var query = event!!.query
+        println("i'm called")
         var response = instance.searchVideo(query.query)
+        println("i'm searching")
         var videos = ArrayList<InlineQueryResult>(response.size)
         var idCounter = 1
 
@@ -29,5 +31,6 @@ class InlineTagHandler(val instance: YoutubeBot): Listener {
         } }
 
         query.answer(instance.bot, InlineQueryResponse.builder().results(videos).build())
+        println("i answer")
     }
 }
