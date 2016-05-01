@@ -217,33 +217,38 @@ class CommandHandler(val instance: YoutubeBot): Listener {
     }
 
     override fun onInlineQueryReceived(event: InlineQueryReceivedEvent?) {
-        var query = event!!.query
-        var response = instance.searchVideo(query.query)
-        var videos = ArrayList<InlineQueryResult>(response.size)
-        var idCounter = 1
+        Thread() { run {
+            var query = event!!.query
+            println("searching...")
+            var response = instance.searchVideo(query.query)
+            var videos = ArrayList<InlineQueryResult>(response.size)
+            var idCounter = 1
 
-        response.forEach { e -> run {
-            var article = InlineQueryResultArticle.builder()
-                    .id(idCounter++.toString()) // useless
-                    .title(e.title)
-                    .url(URL("https://www.youtube.com/watch?v=${e.videoId}"))
-                    .inputMessageContent(InputTextMessageContent.builder()
-                            .messageText("[Click here to download ${e.title}](https://telegram.me/YoutubeMusic_Bot?start=${e.videoId})")
-                            .parseMode(ParseMode.MARKDOWN)
-                            .build())
+            println("processing")
+            response.forEach { e -> run {
+                var article = InlineQueryResultArticle.builder()
+                        .id(idCounter++.toString()) // useless
+                        .title(e.title)
+                        .url(URL("https://www.youtube.com/watch?v=${e.videoId}"))
+                        .inputMessageContent(InputTextMessageContent.builder()
+                                .messageText("[Click here to download ${e.title}](https://telegram.me/YoutubeMusic_Bot?start=${e.videoId})")
+                                .parseMode(ParseMode.MARKDOWN)
+                                .build())
 
-            if (!"null".equals(e.thumb)) {
-                article.thumbUrl(URL(e.thumb))
-            }
+                if (!"null".equals(e.thumb)) {
+                    article.thumbUrl(URL(e.thumb))
+                }
 
-            if (!"null".equals(e.description)) {
-                article.description(e.description)
-            }
+                if (!"null".equals(e.description)) {
+                    article.description(e.description)
+                }
 
-            videos.add(article.build())
-        } }
+                videos.add(article.build())
+            } }
 
-        query.answer(instance.bot, InlineQueryResponse.builder().results(videos).build())
+            query.answer(instance.bot, InlineQueryResponse.builder().results(videos).build())
+            println("responded")
+        } }.start()
     }
 
     fun processCommand(event: CommandMessageReceivedEvent?) {
