@@ -228,7 +228,9 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                     .title(e.title)
                     .url(URL("https://www.youtube.com/watch?v=${e.videoId}"))
                     .inputMessageContent(InputTextMessageContent.builder()
-                            .messageText("https://telegram.me/YoutubeMusic_Bot?start=${e.videoId}").build())
+                            .messageText("[Click here to download ${e.title}](https://telegram.me/YoutubeMusic_Bot?start=${e.videoId})")
+                            .parseMode(ParseMode.MARKDOWN)
+                            .build())
 
             if (!"null".equals(e.thumb)) {
                 article.thumbUrl(URL(e.thumb))
@@ -242,7 +244,6 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         } }
 
         query.answer(instance.bot, InlineQueryResponse.builder().results(videos).build())
-        println("i responded by the way, with ${videos.size} entries")
     }
 
     fun processCommand(event: CommandMessageReceivedEvent?) {
