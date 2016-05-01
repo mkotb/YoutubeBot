@@ -86,14 +86,23 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
                     var pagemap = e.getJSONObject("pagemap")
                     var thumbnail = "null"
 
-                    if (pagemap.has("cse_thumnail"))
-                        thumbnail = pagemap.getJSONObject("cse_thumbnail").getString("thumb")
+                    if (pagemap.has("cse_thumnail")) {
+                        var thumb = pagemap.getJSONObject("cse_thumbnail")
+
+                        if (thumb.has("thumb")) {
+                            thumbnail = thumb.getString("thumb")
+                        }
+                    }
 
                     var description = "null"
 
-                    if (pagemap.has("videoobject"))
-                        description = pagemap.getJSONArray("videoobject").getJSONObject(0)
-                                .getString("description")
+                    if (pagemap.has("videoobject")) {
+                        var video = pagemap.getJSONArray("videoobject").getJSONObject(0)
+
+                        if (video.has("description")) {
+                            description = video.getString("description")
+                        }
+                    }
 
                     videos.add(CachedYoutubeVideo(matcher.group(1), e.getString("title"), thumbnail, description))
                 }
