@@ -41,7 +41,6 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
         bot.eventsManager.register(commandHandler)
         bot.eventsManager.register(InlineHandler(this))
         bot.eventsManager.register(PhotoHandler(this))
-        bot.eventsManager.register(InlineTagHandler(this))
         bot.startUpdates(false)
 
         youtube = YouTube.Builder(NetHttpTransport(), JacksonFactory(), HttpRequestInitializer {  })
@@ -79,17 +78,22 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
                 .queryString("num", 2)
                 .asJson().body.`object`.getJSONArray("items")
 
-        println(response.toString())
-
         response.forEach { e ->
             if (e is JSONObject) {
                 var matcher = videoRegex.matcher(e.getString("link"))
 
                 if (matcher.matches()) {
                     var pagemap = e.getJSONObject("pagemap")
-                    var thumbnail = pagemap.getJSONObject("cse_thumbnail").getString("thumb")
-                    var description = pagemap.getJSONArray("videoobject").getJSONObject(0)
-                            .getString("description")
+                    var thumbnail = "null"
+
+                    if (pagemap.has("cse_thumnail"))
+                        thumbnail = pagemap.getJSONObject("cse_thumbnail").getString("thumb")
+
+                    var description = "null"
+
+                    if (pagemap.has("videoobject"))
+                        description = pagemap.getJSONArray("videoobject").getJSONObject(0)
+                                .getString("description")
 
                     videos.add(CachedYoutubeVideo(matcher.group(1), e.getString("title"), thumbnail, description))
                 }

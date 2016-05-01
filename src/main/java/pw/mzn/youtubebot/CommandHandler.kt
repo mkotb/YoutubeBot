@@ -216,6 +216,35 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         Thread() { processCommand(event) }.start()
     }
 
+    override fun onInlineQueryReceived(event: InlineQueryReceivedEvent?) {
+        var query = event!!.query
+        var response = instance.searchVideo(query.query)
+        var videos = ArrayList<InlineQueryResult>(response.size)
+        var idCounter = 1
+
+        response.forEach { e -> run {
+            var article = InlineQueryResultArticle.builder()
+                    .id(idCounter++.toString()) // useless
+                    .title(e.title)
+                    .url(URL("https://www.youtube.com/watch?v=${e.videoId}"))
+                    .inputMessageContent(InputTextMessageContent.builder()
+                            .messageText("https://telegram.me/YoutubeMusic_Bot?start=${e.videoId}").build())
+
+            if (!"null".equals(e.thumb)) {
+                article.thumbUrl(URL(e.thumb))
+            }
+
+            if (!"null".equals(e.description)) {
+                article.description(e.description)
+            }
+
+            videos.add(article.build())
+        } }
+
+        query.answer(instance.bot, InlineQueryResponse.builder().results(videos).build())
+        println("i responded by the way, with ${videos.size} entries")
+    }
+
     fun processCommand(event: CommandMessageReceivedEvent?) {
         if ("download".equals(event!!.command)) {
             if (event.args.size < 1) {
@@ -643,29 +672,5 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         } else {
             return "No"
         }
-    }
-
-    override fun onInlineQueryReceived(event: InlineQueryReceivedEvent?) {
-        var query = event!!.query
-        println("i'm called")
-        var response = instance.searchVideo(query.query)
-        println("i'm searching")
-        var videos = ArrayList<InlineQueryResult>(response.size)
-        var idCounter = 1
-
-        response.forEach { e -> run {
-            videos.add(InlineQueryResultArticle.builder()
-                    .id(idCounter++.toString()) // useless
-                    .thumbUrl(URL(e.thumb))
-                    .title(e.title)
-                    .url(URL("https://www.youtube.com/watch?v=${e.videoId}"))
-                    .description(e.description)
-                    .inputMessageContent(InputTextMessageContent.builder()
-                            .messageText("https://telegram.me/YoutubeMusic_Bot?start=${e.videoId}").build())
-                    .build())
-        } }
-
-        query.answer(instance.bot, InlineQueryResponse.builder().results(videos).build())
-        println("i answer")
     }
 }
