@@ -228,6 +228,11 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         }
 
          if ("start".equals(event.command)) {
+             if (event.args.size > 0) {
+                 processInput("https://www.youtube.com/watch?v=${event.args[0]}", event.chat, event.message)
+                 return
+             }
+
              event.chat.sendMessage("Hi! Welcome to the YouTube Downloader Bot, thanks for checking it out! " +
                      "The premise of this bot is simple; you give it a video, it sends you it's audio.\n" +
                      "You can throw at it links from YouTube, or give it a search query such as " +

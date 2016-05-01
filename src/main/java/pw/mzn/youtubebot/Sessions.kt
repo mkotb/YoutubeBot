@@ -26,4 +26,4 @@ data class VideoSession(val instance: YoutubeBot, val chatId: String, val link: 
 
 data class TrackSession(val videoSession: VideoSession, val track: Track)
 
-data class CachedYoutubeVideo(val videoId: String, val title: String)
+data class CachedYoutubeVideo(val videoId: String, val title: String, val thumb: String, val description: String)

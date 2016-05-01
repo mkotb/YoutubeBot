@@ -4,7 +4,6 @@ import com.google.api.client.http.HttpRequestInitializer
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.services.youtube.YouTube
-import com.google.api.services.youtube.model.SearchListResponse
 import com.mashape.unirest.http.Unirest
 import org.json.JSONArray
 import org.json.JSONObject
@@ -42,6 +41,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
         bot.eventsManager.register(commandHandler)
         bot.eventsManager.register(InlineHandler(this))
         bot.eventsManager.register(PhotoHandler(this))
+        bot.eventsManager.register(InlineTagHandler(this))
         bot.startUpdates(false)
 
         youtube = YouTube.Builder(NetHttpTransport(), JacksonFactory(), HttpRequestInitializer {  })
@@ -86,7 +86,12 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
                 var matcher = videoRegex.matcher(e.getString("link"))
 
                 if (matcher.matches()) {
-                    videos.add(CachedYoutubeVideo(matcher.group(1), e.getString("title")))
+                    var pagemap = e.getJSONObject("pagemap")
+                    var thumbnail = pagemap.getJSONObject("cse_thumbnail").getString("thumb")
+                    var description = pagemap.getJSONArray("videoobject").getJSONObject(0)
+                            .getString("description")
+
+                    videos.add(CachedYoutubeVideo(matcher.group(1), e.getString("title"), thumbnail, description))
                 }
             }
         }
