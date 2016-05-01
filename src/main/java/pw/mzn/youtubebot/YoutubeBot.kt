@@ -79,6 +79,8 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
                 .queryString("num", 2)
                 .asJson().body.`object`.getJSONArray("items")
 
+        println(response.toString())
+
         response.forEach { e ->
             if (e is JSONObject) {
                 var matcher = videoRegex.matcher(e.getString("link"))
