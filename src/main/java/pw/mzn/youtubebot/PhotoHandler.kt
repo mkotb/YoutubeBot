@@ -36,6 +36,7 @@ class PhotoHandler(val instance: YoutubeBot): Listener {
                 .message("Updated!").build())
 
         session.pendingImage = false
+        session.thumbnail = "N/A"
         session.options.thumbnailUrl = "N/A"
         session.options.thumbnail = true
 

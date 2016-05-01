@@ -219,12 +219,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
     override fun onInlineQueryReceived(event: InlineQueryReceivedEvent?) {
         Thread() { run {
             var query = event!!.query
-            println("searching...")
             var response = instance.searchVideo(query.query)
             var videos = ArrayList<InlineQueryResult>(response.size)
             var idCounter = 1
 
-            println("processing")
             response.forEach { e -> run {
                 var article = InlineQueryResultArticle.builder()
                         .id(idCounter++.toString()) // useless
@@ -247,7 +245,6 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             } }
 
             query.answer(instance.bot, InlineQueryResponse.builder().results(videos).build())
-            println("responded")
         } }.start()
     }
 
