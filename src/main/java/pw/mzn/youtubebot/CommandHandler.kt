@@ -4,14 +4,20 @@ import com.google.common.cache.CacheBuilder
 import pro.zackpollard.telegrambot.api.chat.Chat
 import pro.zackpollard.telegrambot.api.chat.GroupChat
 import pro.zackpollard.telegrambot.api.chat.SuperGroupChat
+import pro.zackpollard.telegrambot.api.chat.inline.send.InlineQueryResponse
+import pro.zackpollard.telegrambot.api.chat.inline.send.content.InputTextMessageContent
+import pro.zackpollard.telegrambot.api.chat.inline.send.results.InlineQueryResult
+import pro.zackpollard.telegrambot.api.chat.inline.send.results.InlineQueryResultArticle
 import pro.zackpollard.telegrambot.api.chat.message.Message
 import pro.zackpollard.telegrambot.api.chat.message.content.TextContent
 import pro.zackpollard.telegrambot.api.chat.message.send.*
 import pro.zackpollard.telegrambot.api.event.Listener
+import pro.zackpollard.telegrambot.api.event.chat.inline.InlineQueryReceivedEvent
 import pro.zackpollard.telegrambot.api.event.chat.message.CommandMessageReceivedEvent
 import pro.zackpollard.telegrambot.api.event.chat.message.TextMessageReceivedEvent
 import pro.zackpollard.telegrambot.api.keyboards.*
 import java.io.File
+import java.net.URL
 import java.text.NumberFormat
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -637,5 +643,29 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         } else {
             return "No"
         }
+    }
+
+    override fun onInlineQueryReceived(event: InlineQueryReceivedEvent?) {
+        var query = event!!.query
+        println("i'm called")
+        var response = instance.searchVideo(query.query)
+        println("i'm searching")
+        var videos = ArrayList<InlineQueryResult>(response.size)
+        var idCounter = 1
+
+        response.forEach { e -> run {
+            videos.add(InlineQueryResultArticle.builder()
+                    .id(idCounter++.toString()) // useless
+                    .thumbUrl(URL(e.thumb))
+                    .title(e.title)
+                    .url(URL("https://www.youtube.com/watch?v=${e.videoId}"))
+                    .description(e.description)
+                    .inputMessageContent(InputTextMessageContent.builder()
+                            .messageText("https://telegram.me/YoutubeMusic_Bot?start=${e.videoId}").build())
+                    .build())
+        } }
+
+        query.answer(instance.bot, InlineQueryResponse.builder().results(videos).build())
+        println("i answer")
     }
 }

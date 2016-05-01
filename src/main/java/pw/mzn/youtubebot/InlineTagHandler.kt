@@ -10,7 +10,7 @@ import java.net.URL
 import java.util.*
 
 class InlineTagHandler(val instance: YoutubeBot): Listener {
-    override fun onInlineQueryReceived(event: InlineQueryReceivedEvent?) {
+    /*override fun onInlineQueryReceived(event: InlineQueryReceivedEvent?) {
         var query = event!!.query
         println("i'm called")
         var response = instance.searchVideo(query.query)
@@ -32,5 +32,5 @@ class InlineTagHandler(val instance: YoutubeBot): Listener {
 
         query.answer(instance.bot, InlineQueryResponse.builder().results(videos).build())
         println("i answer")
-    }
+    }*/
 }
