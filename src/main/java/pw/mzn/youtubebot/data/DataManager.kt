@@ -44,7 +44,7 @@ class DataManager {
         var obj = JSONObject()
 
         if (channels.isNotEmpty()) {
-            var converted = JSONArray(channels.size)
+            var converted = JSONArray()
 
             channels.forEach { e ->
                 converted.put(JSONObject().put("id", e.channelId)
