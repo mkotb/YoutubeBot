@@ -600,6 +600,11 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         channel.subscribed.add(event.chat.id.toLong())
         instance.dataManager.saveToFile()
+        event.chat.sendMessage(SendableTextMessage.builder()
+                .message("Successfully subscribed to $message")
+                .replyMarkup(ReplyKeyboardHide.builder().selective(true).build())
+                .replyTo(event.message)
+                .build())
     }
 
     fun processUnsubscribeSelection(event: TextMessageReceivedEvent) {
@@ -615,7 +620,11 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         var channel = matched[0]
         channel.subscribed.drop(channel.subscribed.indexOf(event.chat.id.toLong()))
         instance.validateChannel(channel)
-        event.chat.sendMessage("Successfully unsubscribed from ${channel.channelName}")
+        event.chat.sendMessage(SendableTextMessage.builder()
+                .message("Successfully unsubscribed from ${channel.channelName}")
+                .replyMarkup(ReplyKeyboardHide.builder().selective(true).build())
+                .replyTo(event.message)
+                .build())
         unsubscribeList.remove(event.chat.id.toLong())
     }
 

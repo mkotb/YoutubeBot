@@ -1,5 +1,6 @@
 package pw.mzn.youtubebot.data
 
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.nio.file.Files
@@ -43,13 +44,15 @@ class DataManager {
         var obj = JSONObject()
 
         if (channels.isNotEmpty()) {
-            var converted = ArrayList<JSONObject>(channels.size)
+            var converted = JSONArray(channels.size)
 
             channels.forEach { e ->
-                converted.add(JSONObject().put("id", e.channelId)
+                converted.put(JSONObject().put("id", e.channelId)
                                           .put("name", e.channelName)
                                           .put("subscribed", e.subscribed.toList()))
             }
+
+            obj.put("channels", converted)
         }
 
         Files.write(Paths.get(dataFile.absolutePath), obj.toString().toByteArray())
