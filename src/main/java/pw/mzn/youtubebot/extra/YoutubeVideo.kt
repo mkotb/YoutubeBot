@@ -1,4 +1,4 @@
-package pw.mzn.youtubebot
+package pw.mzn.youtubebot.extra
 
 import org.json.JSONObject
 import pro.zackpollard.telegrambot.api.chat.message.send.InputFile

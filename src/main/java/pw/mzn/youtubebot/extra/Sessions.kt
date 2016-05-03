@@ -1,7 +1,9 @@
-package pw.mzn.youtubebot
+package pw.mzn.youtubebot.extra
 
 import pro.zackpollard.telegrambot.api.chat.Chat
 import pro.zackpollard.telegrambot.api.chat.message.Message
+import pw.mzn.youtubebot.Track
+import pw.mzn.youtubebot.YoutubeBot
 
 data class CommandSession(val videoMatch: String, val playlistMatch: String, val chat: Chat,
                           val userId: Long, val originalMessage: Message, val playlistVideos: Long,
@@ -27,3 +29,4 @@ data class VideoSession(val instance: YoutubeBot, val chatId: String, val link: 
 data class TrackSession(val videoSession: VideoSession, val track: Track)
 
 data class CachedYoutubeVideo(val videoId: String, val title: String, val thumb: String, val description: String)
+data class CachedYoutubeChannel(val channelId: String, val channelTitle: String)

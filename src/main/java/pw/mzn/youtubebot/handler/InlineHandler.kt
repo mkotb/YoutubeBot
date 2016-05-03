@@ -1,13 +1,14 @@
-package pw.mzn.youtubebot
+package pw.mzn.youtubebot.handler
 
 import pro.zackpollard.telegrambot.api.chat.CallbackQuery
 import pro.zackpollard.telegrambot.api.chat.message.send.InputFile
+import pro.zackpollard.telegrambot.api.chat.message.send.ParseMode
 import pro.zackpollard.telegrambot.api.chat.message.send.SendablePhotoMessage
 import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage
 import pro.zackpollard.telegrambot.api.event.Listener
 import pro.zackpollard.telegrambot.api.event.chat.CallbackQueryReceivedEvent
-import pro.zackpollard.telegrambot.api.keyboards.KeyboardButton
-import pro.zackpollard.telegrambot.api.keyboards.ReplyKeyboardMarkup
+import pro.zackpollard.telegrambot.api.keyboards.*
+import pw.mzn.youtubebot.YoutubeBot
 import java.io.File
 import java.net.URL
 
@@ -98,6 +99,24 @@ class InlineHandler(val instance: YoutubeBot): Listener {
         }
 
         if ("tn".equals(selection)) {
+            if (data.split(".").size == 4) {
+                var selectedThumbnail = data.split(".")[3]
+
+                if ("c".equals(selectedThumbnail)) {
+                    session.pendingImage = true
+                    session.chat.sendMessage("Please send your thumbnail")
+                }
+
+                if ("d".equals(selectedThumbnail)) {
+                    session.options.thumbnail = true
+                    session.thumbnail = handler.thumbnails[session.videoId]!!
+                }
+
+                instance.bot.editMessageText(session.chatId, session.botMessageId, "How would you like to customize your video?",
+                        ParseMode.MARKDOWN, true, handler.videoKeyboardFor(data.split(".")[2].toInt()))
+                return
+            }
+
             if (session.options.thumbnail) {
                 callback.answer("Disabling thumbnail...", false)
                 var thumbnail = File("${session.videoId}.jpg")
@@ -111,13 +130,11 @@ class InlineHandler(val instance: YoutubeBot): Listener {
                         .videoKeyboardFor(data.split(".")[2].toInt()))
             } else {
                 callback.answer("Please answer the following question accordingly...", false)
-                var replyKeyboard = ReplyKeyboardMarkup.builder()
-                        .addRow(KeyboardButton.builder().text("Custom").build(),
-                                KeyboardButton.builder().text("Default").build()).build()
-                session.chat.sendMessage(SendableTextMessage.builder()
-                        .message("Which type of thumbnail would you like to use?")
-                        .replyMarkup(replyKeyboard).build())
-                session.selecting = selection
+                var replyKeyboard = InlineKeyboardMarkup.builder()
+                        .addRow(InlineKeyboardButton.builder().text("Custom").callbackData("$data.c").build(),
+                                InlineKeyboardButton.builder().text("Default").callbackData("$data.d").build()).build()
+                instance.bot.editMessageText(session.chatId, session.botMessageId, "Which type of thumbnail would you like to use?",
+                        ParseMode.MARKDOWN, true, replyKeyboard)
             }
             return
         }

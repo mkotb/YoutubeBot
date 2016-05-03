@@ -7,10 +7,20 @@ import com.google.api.services.youtube.YouTube
 import com.mashape.unirest.http.Unirest
 import org.json.JSONArray
 import org.json.JSONObject
+import org.wasabi.app.AppConfiguration
+import org.wasabi.app.AppServer
+import org.xml.sax.InputSource
 import pro.zackpollard.telegrambot.api.TelegramBot
 import pro.zackpollard.telegrambot.api.chat.Chat
-import java.io.File
-import java.io.InputStreamReader
+import pro.zackpollard.telegrambot.api.chat.message.send.ParseMode
+import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage
+import pw.mzn.youtubebot.data.DataManager
+import pw.mzn.youtubebot.data.SavedChannel
+import pw.mzn.youtubebot.extra.*
+import pw.mzn.youtubebot.handler.CommandHandler
+import pw.mzn.youtubebot.handler.InlineHandler
+import pw.mzn.youtubebot.handler.PhotoHandler
+import java.io.*
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.Period
@@ -19,6 +29,7 @@ import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
+import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.properties.Delegates
 import kotlin.system.exitProcess
 
@@ -27,6 +38,9 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
     val titleRegex = Pattern.compile("(\\[|\\()(.*?)(\\]|\\))")
     val playlistRegex = Pattern.compile("^.*(youtu\\.be\\/|list=)([^#&?]*).*")
     val videoRegex = Pattern.compile("^(?:https?:\\/\\/)?(?:www\\.)?(?:youtube\\.com|youtu\\.be)\\/watch\\?v=([^&]+)")
+    val externalAddress = Unirest.get("http://checkip.amazonaws.com/").asString().body
+    val httpServer = AppServer(AppConfiguration(35870))
+    val dataManager = DataManager()
     val executable = File("youtube-dl")
     val googleKeys = Files.readAllLines(Paths.get("gm_keys"))
     val commandHandler = CommandHandler(this)
@@ -48,6 +62,45 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
                 .build()
 
         println("Logged into Telegram!")
+
+        httpServer.post("/", {
+            var factory = DocumentBuilderFactory.newInstance()
+            var builder = factory.newDocumentBuilder()
+            var document = builder.parse(InputSource(StringReader(request.document)))
+            var feed = document.getElementsByTagName("feed").item(0)
+
+            if (feed == null) {
+                response.statusCode = 400
+                response.send("invalid request")
+                println("invalid")
+            } else {
+                var entry = feed.childNodes.item(4)
+                var videoId = entry.childNodes.item(1).textContent
+                var channelId = entry.childNodes.item(2).textContent
+                var videoTitle = entry.childNodes.item(3).textContent
+                var channelName = entry.childNodes.item(5).childNodes.item(0)
+                var published = entry.childNodes.item(6).textContent
+                var updated = entry.childNodes.item(7).textContent
+
+                println(published)
+                println(updated)
+                println("-------------")
+
+                var channel = dataManager.channelBy(channelId)
+
+                channel?.subscribed?.forEach { e ->
+                    bot.getChat(e).sendMessage(SendableTextMessage.builder()
+                            .message("*$channelName has uploaded a new video!*\n$videoTitle\n" +
+                                     "[Watch here](https://www.youtube.com/watch?v=$videoId)\n" +
+                                     "[Download](https://telegram.me/YoutubeMusic_Bot?start=$videoId)")
+                            .parseMode(ParseMode.MARKDOWN)
+                            .disableWebPagePreview(true)
+                            .build())
+                }
+            }
+        })
+
+        httpServer.start(false)
     }
 
     private fun downloadExecutable() {
@@ -66,6 +119,31 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
         Files.copy(response.body, Paths.get("youtube-dl"))
         executable.setExecutable(true)
         println("Finished downloading youtube-dl executable")
+    }
+
+    fun searchChannel(query: String): List<CachedYoutubeChannel> {
+        var search = youtube.search().list("id,snippet")
+
+        search.q = query
+        search.key = youtubeKey
+        search.type = "channel"
+        search.fields = "items(id,snippet/title)"
+        search.maxResults = 4
+
+        var response = search.execute().items
+        var items = ArrayList<CachedYoutubeChannel>(response.size)
+
+        response.forEach { e -> items.add(CachedYoutubeChannel(e.id.channelId, e.snippet.title)) }
+
+        return items
+    }
+
+    fun validateChannel(channel: SavedChannel) {
+        dataManager.saveToFile()
+
+        if (channel.subscribed.isEmpty()) {
+            unsubscribe(channel.channelId)
+        }
     }
 
     fun searchVideo(query: String): List<CachedYoutubeVideo> {
@@ -330,6 +408,26 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
                 .queryString("num", "2").asJson()
                 .body.`object`
                 .getJSONArray("items")[0] as JSONObject).getString("link")
+    }
+
+    fun subscribe(channelId: String) {
+        var response = Unirest.post("https://pubsubhubbub.appspot.com/subscribe")
+                .field("hub.topic", "https://www.youtube.com/xml/feeds/videos.xml" +
+                        "?channel_id=$channelId")
+                .field("hub.callback", "http://$externalAddress:35870/")
+                .field("hub.mode", "subscribe")
+                .field("hub.verify", "Asynchronous").asString().body
+        println("sub: $response")
+    }
+
+    fun unsubscribe(channelId: String) {
+        var response = Unirest.post("https://pubsubhubbub.appspot.com/subscribe")
+                .field("hub.topic", "https://www.youtube.com/xml/feeds/videos.xml" +
+                        "?channel_id=$channelId")
+                .field("hub.callback", "http://$externalAddress:35870/")
+                .field("hub.mode", "unsubscribe")
+                .field("hub.verify", "Asynchronous").asString().body
+        println("unsub: $response")
     }
 
     private fun nextKeyIndex(): Int {

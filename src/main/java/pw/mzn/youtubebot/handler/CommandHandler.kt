@@ -1,4 +1,4 @@
-package pw.mzn.youtubebot
+package pw.mzn.youtubebot.handler
 
 import com.google.common.cache.CacheBuilder
 import pro.zackpollard.telegrambot.api.chat.Chat
@@ -16,6 +16,9 @@ import pro.zackpollard.telegrambot.api.event.chat.inline.InlineQueryReceivedEven
 import pro.zackpollard.telegrambot.api.event.chat.message.CommandMessageReceivedEvent
 import pro.zackpollard.telegrambot.api.event.chat.message.TextMessageReceivedEvent
 import pro.zackpollard.telegrambot.api.keyboards.*
+import pw.mzn.youtubebot.*
+import pw.mzn.youtubebot.data.SavedChannel
+import pw.mzn.youtubebot.extra.*
 import java.io.File
 import java.net.URL
 import java.text.NumberFormat
@@ -25,8 +28,10 @@ import java.util.concurrent.TimeUnit
 
 class CommandHandler(val instance: YoutubeBot): Listener {
     val thumbnails = ConcurrentHashMap<String, String>() // key = video id, val = link
-    val userSearch = ConcurrentHashMap<Long, List<CachedYoutubeVideo>>()
+    val videoSearch = ConcurrentHashMap<Long, List<CachedYoutubeVideo>>()
+    val channelSearch = ConcurrentHashMap<Long, List<CachedYoutubeChannel>>()
     val trackStore = ConcurrentHashMap<Long, TrackSession>()
+    val unsubscribeList = ArrayList<Long>()
     val inlineList = IdList<CommandSession>()
     val playlistSessions = IdList<PlaylistSession>()
     val videoSessions = IdList<VideoSession>()
@@ -274,11 +279,88 @@ class CommandHandler(val instance: YoutubeBot): Listener {
              event.chat.sendMessage("Hi! Welcome to the YouTube Downloader Bot, thanks for checking it out! " +
                      "The premise of this bot is simple; you give it a video, it sends you it's audio.\n" +
                      "You can throw at it links from YouTube, or give it a search query such as " +
-                     "\"Stressed Out Tomize Remix\" and it'll respond to you as soon as it can.\n It also works " +
+                     "\"Stressed Out Tomsize Remix\" and it'll respond to you as soon as it can.\n It also works " +
                      "with playlists! You can make the bot download your favourite podcasts on YouTube or your " +
                      "favourite songs. Give it a try, send any query!\n\nContact @MazenK for support")
              return
          }
+
+        if ("subscribe".equals(event.command)) {
+            if (event.args.size < 1) {
+                event.chat.sendMessage("Please provide me a channel to subscribe to as an argument")
+                return
+            }
+
+            event.chat.sendMessage("Searching for channel...")
+            var channelz = instance.searchChannel(event.args[0]) // original, hence the z
+            var channels = channelz.map { e -> e.channelTitle }.toMutableList()
+            var tempList = ArrayList<KeyboardButton>()
+            var keyboard = ReplyKeyboardMarkup.builder().selective(true)
+
+            if (channels.isEmpty()) {
+                event.chat.sendMessage("No channels were found by the name ${event.args[0]}")
+                return
+            }
+
+            channels.add("Cancel")
+
+            for (channel in channels) {
+                tempList.add(KeyboardButton.builder().text(channel).build())
+
+                if (tempList.size == 2) {
+                    keyboard.addRow(tempList)
+                    tempList.clear()
+                }
+            }
+
+            if (tempList.isNotEmpty()) {
+                keyboard.addRow(tempList)
+            }
+
+
+            channelSearch.put(event.chat.id.toLong(), channelz)
+            event.chat.sendMessage(SendableTextMessage.builder()
+                    .message("Please select one of the following or cancel...")
+                    .replyMarkup(keyboard.build())
+                    .replyTo(event.message)
+                    .build())
+        }
+
+        if ("unsubscribe".equals(event.command)) {
+            if (event.args.size < 1) {
+                event.chat.sendMessage("Please provide me a channel to unsubscribe to as an argument")
+                return
+            }
+
+            var dataManager = instance.dataManager
+            var matched = dataManager.channels.filter { e -> e.channelName.contains(event.args[0]) &&
+                    e.subscribed.contains(event.chat.id.toLong()) }
+
+            if (matched.isEmpty()) {
+                event.chat.sendMessage("No matches for subscribed channels were found!")
+                return
+            }
+
+            if (matched.size == 1) {
+                var channel = matched[0]
+                channel.subscribed.drop(channel.subscribed.indexOf(event.chat.id.toLong()))
+                instance.validateChannel(channel)
+                event.chat.sendMessage("Successfully unsubscribed from ${channel.channelName}")
+                return
+            }
+
+            var keyboard = ReplyKeyboardMarkup.builder().selective(true)
+
+            matched.forEach { e -> keyboard.addRow(KeyboardButton.builder().text(e.channelName).build()) }
+
+            keyboard.addRow(KeyboardButton.builder().text("Cancel").build())
+            unsubscribeList.add(event.chat.id.toLong())
+            event.chat.sendMessage(SendableTextMessage.builder()
+                    .message("Please select one of the following or cancel...")
+                    .replyMarkup(keyboard.build())
+                    .replyTo(event.message)
+                    .build())
+        }
     }
 
     override fun onTextMessageReceived(event: TextMessageReceivedEvent?) {
@@ -298,8 +380,18 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             return
         }
 
-        if (userSearch.containsKey(event!!.message.sender.id)) {
+        if (videoSearch.containsKey(event!!.message.sender.id)) {
             processSearchSelection(event)
+            return
+        }
+
+        if (channelSearch.containsKey(event.chat.id.toLong())) {
+            processChannelSelection(event)
+            return
+        }
+
+        if (unsubscribeList.contains(event.chat.id.toLong())) {
+            processUnsubscribeSelection(event)
             return
         }
 
@@ -447,24 +539,6 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             event.chat.sendMessage(SendableTextMessage.builder()
                     .replyTo(event.message)
                     .message("Updated!").build())
-        } else if ("tn".equals(selecting)) {
-            if ("Custom".equals(message)) {
-                session.pendingImage = true
-                event.chat.sendMessage(SendableTextMessage.builder()
-                        .replyTo(event.message)
-                        .replyMarkup(ReplyKeyboardHide.builder().selective(true).build())
-                        .message("Please send your thumbnail...").build())
-            } else if ("Default".equals(message)) {
-                session.options.thumbnail = true
-                session.thumbnail = thumbnails[session.videoId]!!
-                event.chat.sendMessage(SendableTextMessage.builder()
-                        .replyTo(event.message)
-                        .replyMarkup(ReplyKeyboardHide.builder().selective(true).build())
-                        .message("Updated!").build())
-            } else {
-                event.chat.sendMessage("Please use the keyboard to continue...")
-                return
-            }
         }
 
         session.selecting = "N/A" // reset back to processVideoInline()
@@ -473,10 +547,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
     fun processSearchSelection(event: TextMessageReceivedEvent) {
         var userId = event.message.sender.id
-        var videos = userSearch[userId]
+        var videos = videoSearch[userId]
         var selected = videos!!.filter { e -> e.title.equals(event.content.content) }.firstOrNull()
 
-        userSearch.remove(userId)
+        videoSearch.remove(userId)
 
         if (selected == null) {
             event.chat.sendMessage(SendableTextMessage.builder()
@@ -504,6 +578,46 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         sendVideo(event.chat, link, false, event.message, userId, null, duration, titleCache.asMap()[selected.videoId]!!)
     }
 
+    fun processChannelSelection(event: TextMessageReceivedEvent) {
+        var message = event.content.content
+        var channels = channelSearch[event.chat.id.toLong()]
+        var matchingChannel = channels!!.filter { e -> e.channelTitle.equals(message) }
+                .firstOrNull()
+        channelSearch.remove(event.chat.id.toLong())
+
+        if (matchingChannel == null) {
+            event.chat.sendMessage("Cancelled!")
+            return
+        }
+
+        var channel = instance.dataManager.channelBy(matchingChannel.channelId)
+
+        if (channel == null) {
+            channel = SavedChannel(matchingChannel.channelId, matchingChannel.channelTitle, ArrayList<Long>())
+            instance.dataManager.channels.add(channel)
+            instance.subscribe(matchingChannel.channelId)
+        }
+
+        channel.subscribed.add(event.chat.id.toLong())
+        instance.dataManager.saveToFile()
+    }
+
+    fun processUnsubscribeSelection(event: TextMessageReceivedEvent) {
+        var message = event.content.content
+        var matched = instance.dataManager.channels.filter { e -> e.channelName.equals(message) &&
+                e.subscribed.contains(event.chat.id.toLong()) }
+
+        if (matched.isEmpty()) {
+            event.chat.sendMessage("Cancelled!")
+            return
+        }
+
+        var channel = matched[0]
+        channel.subscribed.drop(channel.subscribed.indexOf(event.chat.id.toLong()))
+        instance.validateChannel(channel)
+        event.chat.sendMessage("Successfully unsubscribed from ${channel.channelName}")
+        unsubscribeList.remove(event.chat.id.toLong())
+    }
 
     fun processInput(input: String, chat: Chat, message: Message) {
         var userId = message.sender.id
@@ -612,7 +726,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         keyboard.addRow(KeyboardButton.builder().text("Cancel").build())
         keyboard.selective(true)
 
-        userSearch.put(userId, cachedVids)
+        videoSearch.put(userId, cachedVids)
         var message = SendableTextMessage.builder()
                 .message("Select a Video")
                 .replyMarkup(keyboard.build())

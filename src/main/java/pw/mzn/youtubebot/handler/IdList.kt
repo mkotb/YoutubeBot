@@ -1,4 +1,4 @@
-package pw.mzn.youtubebot
+package pw.mzn.youtubebot.handler
 
 import java.util.*
 

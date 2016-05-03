@@ -1,8 +1,10 @@
-package pw.mzn.youtubebot
+package pw.mzn.youtubebot.handler
 
 import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage
 import pro.zackpollard.telegrambot.api.event.Listener
 import pro.zackpollard.telegrambot.api.event.chat.message.PhotoMessageReceivedEvent
+import pw.mzn.youtubebot.extra.VideoSession
+import pw.mzn.youtubebot.YoutubeBot
 import java.io.File
 
 class PhotoHandler(val instance: YoutubeBot): Listener {
