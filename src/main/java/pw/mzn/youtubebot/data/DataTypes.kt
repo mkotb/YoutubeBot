@@ -1,3 +1,5 @@
 package pw.mzn.youtubebot.data
 
-data class SavedChannel(val channelId: String, val channelName: String, val subscribed: MutableList<Long>) // long = user ids
+import java.util.*
+
+data class SavedChannel(val channelId: String, val channelName: String, val subscribed: ArrayList<Long>) // long = user ids

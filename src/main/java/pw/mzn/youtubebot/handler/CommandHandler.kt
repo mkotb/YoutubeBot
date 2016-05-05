@@ -343,7 +343,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
             if (matched.size == 1) {
                 var channel = matched[0]
-                channel.subscribed.drop(channel.subscribed.indexOf(event.chat.id.toLong()))
+                channel.subscribed.remove(event.chat.id.toLong())
                 instance.validateChannel(channel)
                 event.chat.sendMessage("Successfully unsubscribed from ${channel.channelName}")
                 return
@@ -618,7 +618,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         }
 
         var channel = matched[0]
-        channel.subscribed.drop(channel.subscribed.indexOf(event.chat.id.toLong()))
+        channel.subscribed.remove(event.chat.id.toLong())
         instance.validateChannel(channel)
         event.chat.sendMessage(SendableTextMessage.builder()
                 .message("Successfully unsubscribed from ${channel.channelName}")
