@@ -333,8 +333,8 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             }
 
             var dataManager = instance.dataManager
-            var matched = dataManager.channels.filter { e -> e.channelName.toLowerCase().contains(event.args[0].toLowerCase()) &&
-                    e.subscribed.contains(event.chat.id.toLong()) }
+            var matched = dataManager.channels.filter { e -> e.channelName.toLowerCase().contains(event.args[0].toLowerCase())}
+            matched = matched.filter { e -> e.subscribed.contains(event.chat.id.toLong()) }
 
             if (matched.isEmpty()) {
                 event.chat.sendMessage("No matches for subscribed channels were found!")
