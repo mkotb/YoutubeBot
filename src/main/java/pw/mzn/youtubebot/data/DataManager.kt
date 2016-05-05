@@ -29,7 +29,7 @@ class DataManager {
                     var subscribed = e.getJSONArray("subscribed")
                     var subscribedList = ArrayList<Long>(subscribed.length())
 
-                    subscribed.forEach { e -> if (e is Int) { subscribedList.add(e.toLong()); println("lol $e") } }
+                    subscribed.forEach { e -> if (e is Int) { subscribedList.add(e.toLong()) } }
                     channels.add(SavedChannel(e.getString("id"), e.getString("name"), subscribedList))
                 }
             } }
