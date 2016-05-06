@@ -440,9 +440,10 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
         return toReturn
     }
 
-    fun setThumbnail(id: String) {
+    fun setThumbnail(id: String, directory: File) {
         ProcessBuilder().command("/usr/bin/lame", "--ti", "$id.jpg", "$id.mp3")
                 .redirectErrorStream(true)
+                .directory(directory)
                 .start()
                 .waitFor();
         println("finished setting thumbnail")
@@ -526,7 +527,7 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
                 Files.copy(res.body, Paths.get("$id.jpg"))
             }
 
-            instance.setThumbnail(id)
+            instance.setThumbnail(id, File("$id.mp3").parentFile)
         }
 
         return YoutubeVideo(id, File("$id.mp3")).fetchMetadata()
@@ -594,7 +595,7 @@ class PlaylistCallable(val options: PlaylistOptions, val id: String, val instanc
                     thumb.delete()
 
                 Files.copy(res.body, Paths.get(thumb.name))
-                instance.setThumbnail(id)
+                instance.setThumbnail(id, folder)
             }
         }
 
