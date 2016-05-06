@@ -439,6 +439,17 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
 
         return toReturn
     }
+
+    fun setThumbnail(id: String) {
+        ProcessBuilder().command("/usr/bin/lame", "--ti", "$id.jpg", "$id.mp3")
+                .redirectErrorStream(true)
+                .start()
+                .waitFor();
+        println("finished setting thumbnail")
+        File("$id.mp3").delete()
+        Files.move(Paths.get("$id.mp3.mp3"), Paths.get("$id.mp3"))
+        File("$id.jpg").delete()
+    }
 }
 
 class VideoCallable(val id: String, val options: VideoOptions, val instance: YoutubeBot): Callable<YoutubeVideo> {
@@ -515,16 +526,7 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
                 Files.copy(res.body, Paths.get("$id.jpg"))
             }
 
-            //Files.move(Paths.get("$id.mp3"), Paths.get("$id.old.mp3"))
-            process = ProcessBuilder().command("/usr/bin/lame", "--ti", "$id.jpg", "$id.mp3")
-                    .redirectErrorStream(true)
-                    .start()
-            process.waitFor()
-            InputStreamReader(process.inputStream).forEachLine { e -> println(e) }
-            println("finished setting thumbnail")
-            File("$id.mp3").delete()
-            Files.move(Paths.get("$id.mp3.mp3"), Paths.get("$id.mp3"))
-            File("$id.jpg").delete()
+            instance.setThumbnail(id)
         }
 
         return YoutubeVideo(id, File("$id.mp3")).fetchMetadata()
@@ -569,6 +571,31 @@ class PlaylistCallable(val options: PlaylistOptions, val id: String, val instanc
 
         for (f in folder.listFiles({dir, name -> name.endsWith(".mp3")})) {
             playlist.videoList.add(YoutubeVideo(f.nameWithoutExtension, f, playlist).fetchMetadata())
+        }
+
+        // lets have some fun
+        for (video in playlist.videoList) {
+            var lastFm = instance.searchTrack(video.metadata.name).toList()
+
+            if (lastFm.isEmpty()) {
+                continue
+            }
+
+            var track = lastFm[0]
+
+            video.customTitle = track.name
+            video.customPerformer = track.artist
+
+            if (!"".equals(track.coverUrl)) {
+                var thumb = File("${video.id}.jpg")
+                var res = Unirest.get(track.coverUrl).asBinary()
+
+                if (thumb.exists())
+                    thumb.delete()
+
+                Files.copy(res.body, Paths.get(thumb.name))
+                instance.setThumbnail(id)
+            }
         }
 
         return playlist

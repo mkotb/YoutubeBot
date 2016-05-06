@@ -10,6 +10,8 @@ import kotlin.properties.Delegates
 
 data class YoutubeVideo(val id: String, val file: File, val owningPlaylist: YoutubePlaylist? = null) {
     var metadata: VideoMetadata by Delegates.notNull()
+    var customTitle: String? = null
+    var customPerformer: String? = null
 
     fun fetchMetadata(): YoutubeVideo {
         var mdJson = JSONObject(Files.readAllLines(Paths.get(file.absolutePath.replace("$id.mp3", "$id.info.json")))
@@ -33,11 +35,19 @@ data class YoutubeVideo(val id: String, val file: File, val owningPlaylist: Yout
     }
 
     fun sendable(): SendableAudioMessage.SendableAudioMessageBuilder {
-        return SendableAudioMessage.builder()
-                .audio(InputFile(file))
+        var builder = SendableAudioMessage.builder()
                 .title(metadata.name)
                 .performer(metadata.uploader)
+                .audio(InputFile(file))
                 .duration(metadata.duration)
+
+        if (customTitle != null)
+            builder.title(customTitle)
+
+        if (customPerformer != null)
+            builder.performer(customPerformer)
+
+        return builder
     }
 }
 
