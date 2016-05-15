@@ -595,7 +595,6 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         if (channel == null) {
             channel = SavedChannel(matchingChannel.channelId, matchingChannel.channelTitle, ArrayList<Long>())
             instance.dataManager.channels.add(channel)
-            instance.subscribe(matchingChannel.channelId)
         }
 
         channel.subscribed.add(event.chat.id.toLong())
