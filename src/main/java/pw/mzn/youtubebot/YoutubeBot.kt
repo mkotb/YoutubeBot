@@ -532,7 +532,7 @@ class PlaylistCallable(val options: PlaylistOptions, val id: String, val instanc
                     thumb.delete()
 
                 Files.copy(res.body, Paths.get(thumb.name))
-                instance.setThumbnail(id, folder)
+                instance.setThumbnail(video.id, folder)
             }
         }
 
