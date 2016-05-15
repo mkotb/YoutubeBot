@@ -19,18 +19,20 @@ class SubscriptionsTask(val instance: YoutubeBot, val timer: Timer): TimerTask()
                 .joinToString(",")
         channelList.fields = "items(id,contentDetails/relatedPlaylists/uploads)"
 
-        channelList.execute().items.forEach { e -> playlists.put(e.contentDetails.relatedPlaylists.uploads, e.id); println(e.id) }
+        channelList.execute().items.forEach { e -> playlists.put(e.contentDetails.relatedPlaylists.uploads, e.id);
+            println(e.id + ";" + e.contentDetails.relatedPlaylists.uploads) }
         var uploadsList = youtube.playlistItems().list("id,snippet")
 
         uploadsList.key = channelList.key
         uploadsList.id = playlists.keys.joinToString(",")
         uploadsList.fields = "items(id,snippet/publishedAt,snippet/resourceId/videoId," +
                 "snippet/playlistId,snippet/title)"
+        println(uploadsList.id)
 
         uploadsList.execute().items
                 .map { e -> println(e.snippet.resourceId.videoId); SubscriptionPlaylistVid(e.snippet.resourceId.videoId, e.snippet.publishedAt,
                         e.snippet.title, e.snippet.playlistId)}
-                .filter { e -> Date(e.published.value).after(Date(System.currentTimeMillis() -
+                .filter { e -> println(e.published.value); Date(e.published.value).after(Date(System.currentTimeMillis() -
                         TimeUnit.MINUTES.toMillis(35L))) }
                 .forEach { vid ->
                     run() {
