@@ -24,10 +24,9 @@ class SubscriptionsTask(val instance: YoutubeBot, val timer: Timer): TimerTask()
         var uploadsList = youtube.playlistItems().list("id,snippet")
 
         uploadsList.key = channelList.key
-        uploadsList.id = playlists.keys.joinToString(",")
+        uploadsList.playlistId = playlists.keys.joinToString(",")
         uploadsList.fields = "items(id,snippet/publishedAt,snippet/resourceId/videoId," +
                 "snippet/playlistId,snippet/title)"
-        println(uploadsList.id)
 
         uploadsList.execute().items
                 .map { e -> println(e.snippet.resourceId.videoId); SubscriptionPlaylistVid(e.snippet.resourceId.videoId, e.snippet.publishedAt,
