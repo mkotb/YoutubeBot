@@ -9,7 +9,7 @@ import java.io.File
 
 class PhotoHandler(val instance: YoutubeBot): Listener {
     override fun onPhotoMessageReceived(event: PhotoMessageReceivedEvent?) {
-        var videoEntry = instance.commandHandler.videoSessions.map.entries.filter { e -> e.value.chatId.equals(event!!.chat.id) }
+        var videoEntry = instance.command.video.videoSessions.map.entries.filter { e -> e.value.chatId.equals(event!!.chat.id) }
                 .firstOrNull()
 
         if (videoEntry != null) {
@@ -42,6 +42,6 @@ class PhotoHandler(val instance: YoutubeBot): Listener {
         session.options.thumbnailUrl = "N/A"
         session.options.thumbnail = true
 
-        instance.bot.editMessageReplyMarkup(session.chatId, session.botMessageId, instance.commandHandler.videoKeyboardFor(entry.key))
+        instance.bot.editMessageReplyMarkup(session.chatId, session.botMessageId, instance.command.video.videoKeyboardFor(entry.key))
     }
 }
