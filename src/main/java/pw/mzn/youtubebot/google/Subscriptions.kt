@@ -35,7 +35,10 @@ class SubscriptionsTask(val instance: YoutubeBot, val timer: Timer): TimerTask()
             uploadsList.queue(batch, callback)
         }}
 
-        batch.execute()
+        if (batch.size() >= 1) {
+            batch.execute()
+        }
+
         println("checked for new videos")
         timer.schedule(SubscriptionsTask(instance, timer), TimeUnit.MINUTES.toMillis(30L))
     }
