@@ -19,7 +19,7 @@ class SubscriptionsTask(val instance: YoutubeBot, val timer: Timer): TimerTask()
                 .joinToString(",")
         channelList.fields = "items(id,contentDetails/relatedPlaylists/uploads)"
 
-        channelList.execute().items.forEach { e -> playlists.put(e.contentDetails.relatedPlaylists.uploads, e.id) }
+        channelList.execute().items.forEach { e -> playlists.put(e.contentDetails.relatedPlaylists.uploads, e.id); println(e.id) }
         var uploadsList = youtube.playlistItems().list("id,snippet")
 
         uploadsList.key = channelList.key
@@ -28,13 +28,14 @@ class SubscriptionsTask(val instance: YoutubeBot, val timer: Timer): TimerTask()
                 "snippet/playlistId,snippet/title)"
 
         uploadsList.execute().items
-                .map { e -> SubscriptionPlaylistVid(e.snippet.resourceId.videoId, e.snippet.publishedAt,
-                        e.snippet.title, e.snippet.playlistId) }
+                .map { e -> println(e.snippet.resourceId.videoId); SubscriptionPlaylistVid(e.snippet.resourceId.videoId, e.snippet.publishedAt,
+                        e.snippet.title, e.snippet.playlistId)}
                 .filter { e -> Date(e.published.value).after(Date(System.currentTimeMillis() -
                         TimeUnit.MINUTES.toMillis(35L))) }
                 .forEach { vid ->
                     run() {
                         var channel = instance.dataManager.channelBy(playlists[vid.playlistId]!!)
+                        println("sending!!11!")
 
                         channel?.subscribed?.forEach { e ->
                             instance.bot.getChat(e).sendMessage(SendableTextMessage.builder()
