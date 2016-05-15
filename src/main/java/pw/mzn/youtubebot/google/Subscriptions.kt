@@ -4,7 +4,6 @@ import com.google.api.client.googleapis.batch.json.JsonBatchCallback
 import com.google.api.client.googleapis.json.GoogleJsonError
 import com.google.api.client.http.HttpHeaders
 import com.google.api.client.util.DateTime
-import com.google.api.services.youtube.model.PlaylistItem
 import com.google.api.services.youtube.model.PlaylistItemListResponse
 import pro.zackpollard.telegrambot.api.chat.message.send.ParseMode
 import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage
@@ -20,8 +19,7 @@ class SubscriptionsTask(val instance: YoutubeBot, val timer: Timer): TimerTask()
         var channelList = youtube.channels().list("id,contentDetails")
 
         channelList.key = instance.googleKeys[instance.nextKeyIndex()]
-        channelList.id = instance.dataManager.channels
-                .map { e -> e.channelId }
+        channelList.id = instance.dataManager.channels.map { e -> e.channelId }
                 .joinToString(",")
         channelList.fields = "items(id,contentDetails/relatedPlaylists/uploads)"
 
@@ -48,22 +46,19 @@ data class SubscriptionPlaylistVid(val videoId: String, val published: DateTime,
 
 class SubscriptionCallback(val instance: YoutubeBot): JsonBatchCallback<PlaylistItemListResponse>() {
     override fun onSuccess(res: PlaylistItemListResponse, p1: HttpHeaders?) {
-        res.items.map { e -> println(e.snippet.resourceId.videoId); SubscriptionPlaylistVid(e.snippet.resourceId.videoId, e.snippet.publishedAt,
-                e.snippet.title, e.snippet.playlistId, e.snippet.channelId)}
-                .filter { e -> println(e.published.value); Date(e.published.value).after(Date(System.currentTimeMillis() -
+        res.items.map { e -> SubscriptionPlaylistVid(e.snippet.resourceId.videoId, e.snippet.publishedAt, e.snippet.title,
+                e.snippet.playlistId, e.snippet.channelId)}
+                .filter { e -> Date(e.published.value).after(Date(System.currentTimeMillis() -
                         TimeUnit.MINUTES.toMillis(35L))) }
                 .forEach { vid ->
                     run() {
                         var channel = instance.dataManager.channelBy(vid.channelId)
-                        println("sending!!11!")
 
                         channel?.subscribed?.forEach { e ->
                             instance.bot.getChat(e).sendMessage(SendableTextMessage.builder()
-                                    .message("*${channel.channelName} has uploaded a new video!*\n${vid.title}\n" +
-                                            "[Watch here](https://www.youtube.com/watch?v=${vid.videoId})\n" +
-                                            "[Download](https://telegram.me/YoutubeMusic_Bot?start=${vid.videoId})")
+                                    .message("*${channel.channelName} has uploaded a new video!*\n_${vid.title}_\n" +
+                                            "[Watch here](https://www.youtube.com/watch?v=${vid.videoId})")
                                     .parseMode(ParseMode.MARKDOWN)
-                                    .disableWebPagePreview(true)
                                     .build())
                         }
                     }
