@@ -1,6 +1,11 @@
 package pw.mzn.youtubebot.google
 
+import com.google.api.client.googleapis.batch.json.JsonBatchCallback
+import com.google.api.client.googleapis.json.GoogleJsonError
+import com.google.api.client.http.HttpHeaders
 import com.google.api.client.util.DateTime
+import com.google.api.services.youtube.model.PlaylistItem
+import com.google.api.services.youtube.model.PlaylistItemListResponse
 import pro.zackpollard.telegrambot.api.chat.message.send.ParseMode
 import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage
 import pw.mzn.youtubebot.YoutubeBot
@@ -9,8 +14,9 @@ import java.util.concurrent.TimeUnit
 
 class SubscriptionsTask(val instance: YoutubeBot, val timer: Timer): TimerTask() {
     override fun run() {
-        var playlists = HashMap<String, String>()
+        var callback = SubscriptionCallback(instance)
         var youtube = instance.youtube
+        var batch = youtube.batch()
         var channelList = youtube.channels().list("id,contentDetails")
 
         channelList.key = instance.googleKeys[instance.nextKeyIndex()]
@@ -19,23 +25,36 @@ class SubscriptionsTask(val instance: YoutubeBot, val timer: Timer): TimerTask()
                 .joinToString(",")
         channelList.fields = "items(id,contentDetails/relatedPlaylists/uploads)"
 
-        channelList.execute().items.forEach { e -> playlists.put(e.contentDetails.relatedPlaylists.uploads, e.id);
-            println(e.id + ";" + e.contentDetails.relatedPlaylists.uploads) }
-        var uploadsList = youtube.playlistItems().list("id,snippet")
+        channelList.execute().items.forEach { e -> run() {
+            var uploadsList = youtube.playlistItems().list("id,snippet")
 
-        uploadsList.key = channelList.key
-        uploadsList.playlistId = playlists.keys.joinToString(",")
-        uploadsList.fields = "items(id,snippet/publishedAt,snippet/resourceId/videoId," +
-                "snippet/playlistId,snippet/title)"
+            uploadsList.key = channelList.key
+            uploadsList.playlistId = e.contentDetails.relatedPlaylists.uploads
+            uploadsList.fields = "items(id,snippet/publishedAt,snippet/resourceId/videoId," +
+                    "snippet/playlistId,snippet/title,snippet/channelId)"
 
-        uploadsList.execute().items
-                .map { e -> println(e.snippet.resourceId.videoId); SubscriptionPlaylistVid(e.snippet.resourceId.videoId, e.snippet.publishedAt,
-                        e.snippet.title, e.snippet.playlistId)}
+            uploadsList.execute().items
+            uploadsList.queue(batch, callback)
+        }}
+
+        batch.execute()
+        println("checked for new videos")
+        timer.schedule(SubscriptionsTask(instance, timer), TimeUnit.MINUTES.toMillis(30L))
+    }
+}
+
+data class SubscriptionPlaylistVid(val videoId: String, val published: DateTime, val title: String,
+                                   val playlistId: String, val channelId: String)
+
+class SubscriptionCallback(val instance: YoutubeBot): JsonBatchCallback<PlaylistItemListResponse>() {
+    override fun onSuccess(res: PlaylistItemListResponse, p1: HttpHeaders?) {
+        res.items.map { e -> println(e.snippet.resourceId.videoId); SubscriptionPlaylistVid(e.snippet.resourceId.videoId, e.snippet.publishedAt,
+                e.snippet.title, e.snippet.playlistId, e.snippet.channelId)}
                 .filter { e -> println(e.published.value); Date(e.published.value).after(Date(System.currentTimeMillis() -
                         TimeUnit.MINUTES.toMillis(35L))) }
                 .forEach { vid ->
                     run() {
-                        var channel = instance.dataManager.channelBy(playlists[vid.playlistId]!!)
+                        var channel = instance.dataManager.channelBy(vid.channelId)
                         println("sending!!11!")
 
                         channel?.subscribed?.forEach { e ->
@@ -49,11 +68,9 @@ class SubscriptionsTask(val instance: YoutubeBot, val timer: Timer): TimerTask()
                         }
                     }
                 }
+    }
 
-        println("checked for new videos")
-        timer.schedule(SubscriptionsTask(instance, timer), TimeUnit.MINUTES.toMillis(30L))
+    override fun onFailure(p0: GoogleJsonError?, p1: HttpHeaders?) {
+        throw UnsupportedOperationException()
     }
 }
-
-data class SubscriptionPlaylistVid(val videoId: String, val published: DateTime, val title: String,
-                                   val playlistId: String)
