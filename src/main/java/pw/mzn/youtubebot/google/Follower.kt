@@ -47,7 +47,11 @@ class Follower(val instance: YoutubeBot) {
 class FollowerTask(val owner: Follower): TimerTask() {
     override fun run() {
         var creds = owner.instance.youtubeUserAuth.codeFlow.credentialDataStore
-        creds.keySet().forEach { key -> owner.checkup(owner.instance.youtubeUserAuth.credFrom(creds.get(key)), key) }
+
+        if (creds != null) {
+            creds.keySet().forEach { key -> owner.checkup(owner.instance.youtubeUserAuth.credFrom(creds.get(key)), key) }
+        }
+
         owner.timer.schedule(FollowerTask(owner), TimeUnit.HOURS.toMillis(6L))
     }
 }
