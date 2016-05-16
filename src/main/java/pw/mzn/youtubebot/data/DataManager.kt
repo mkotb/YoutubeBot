@@ -1,5 +1,6 @@
 package pw.mzn.youtubebot.data
 
+import com.google.api.client.auth.oauth2.StoredCredential
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -10,6 +11,7 @@ import java.util.*
 class DataManager {
     val dataFile = File("data.json")
     val channels = LinkedList<SavedChannel>()
+    val credentials = HashMap<String, StoredCredential>()
 
     init {
         loadFromFile()
@@ -34,6 +36,16 @@ class DataManager {
                 }
             } }
         }
+
+        if (obj.has("creds")) {
+            obj.getJSONArray("creds").forEach { e -> run {
+                if (e is JSONObject) {
+                    credentials.put(e.getString("id"), StoredCredential().setAccessToken(e.getString("access_token"))
+                            .setRefreshToken(e.getString("refresh_token"))
+                            .setExpirationTimeMilliseconds(e.getLong("expiration_time")))
+                }
+            } }
+        }
     }
 
     fun saveToFile() {
@@ -46,13 +58,19 @@ class DataManager {
         if (channels.isNotEmpty()) {
             var converted = JSONArray()
 
-            channels.forEach { e ->
-                converted.put(JSONObject().put("id", e.channelId)
-                                          .put("name", e.channelName)
-                                          .put("subscribed", e.subscribed.toList()))
-            }
-
+            channels.forEach { e -> converted.put(JSONObject().put("id", e.channelId)
+                                             .put("name", e.channelName)
+                                            .put("subscribed", e.subscribed.toList())) }
             obj.put("channels", converted)
+        }
+
+        if (credentials.isNotEmpty()) {
+            var converted = JSONArray()
+
+            credentials.forEach { e -> converted.put(JSONObject().put("id", e.key).put("access_token", e.value.accessToken)
+                                                                 .put("refresh_token", e.value.refreshToken)
+                                                                 .put("expiration_time", e.value.expirationTimeMilliseconds)) }
+            obj.put("creds", converted)
         }
 
         Files.write(Paths.get(dataFile.absolutePath), obj.toString().toByteArray())

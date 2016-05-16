@@ -83,6 +83,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
          if ("start".equals(event.command)) {
              if (event.args.size > 0) {
+                 if (event.args[0].startsWith("login")) {
+                     instance.youtubeUserAuth.processAuth(event.args[0].split("-"), event)
+                 }
+
                  processInput("https://www.youtube.com/watch?v=${event.args[0]}", event.chat, event.message)
                  return
              }
@@ -102,6 +106,14 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         if ("unsubscribe".equals(event.command)) {
             instance.command.subscription.unsubscribe(event)
+        }
+
+        if ("login".equals(event.command)) {
+            instance.youtubeUserAuth.processLogin(event)
+        }
+
+        if ("logout".equals(event.command)) {
+            instance.youtubeUserAuth.processLogout(event)
         }
     }
 

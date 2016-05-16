@@ -13,7 +13,9 @@ import pw.mzn.youtubebot.cmd.CommandHolder
 import pw.mzn.youtubebot.data.DataManager
 import pw.mzn.youtubebot.data.SavedChannel
 import pw.mzn.youtubebot.extra.*
+import pw.mzn.youtubebot.google.Follower
 import pw.mzn.youtubebot.google.SubscriptionsTask
+import pw.mzn.youtubebot.google.YTUserAuthentication
 import pw.mzn.youtubebot.handler.CommandHandler
 import pw.mzn.youtubebot.handler.InlineHandler
 import pw.mzn.youtubebot.handler.PhotoHandler
@@ -30,7 +32,7 @@ import java.util.regex.Pattern
 import kotlin.properties.Delegates
 import kotlin.system.exitProcess
 
-class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String) {
+class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String, youtubeClientId: String, youtubeClientSecret: String) {
     val executor = Executors.newFixedThreadPool(2)
     val titleRegex = Pattern.compile("(\\[|\\()(.*?)(\\]|\\))")
     val playlistRegex = Pattern.compile("^.*(youtu\\.be\\/|list=)([^#&?]*).*")
@@ -41,6 +43,8 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String)
     val commandHandler = CommandHandler(this)
     val command = CommandHolder(this)
     val inlineHandler = InlineHandler(this)
+    val youtubeUserAuth = YTUserAuthentication(this, youtubeClientId, youtubeClientSecret)
+    val follower = Follower(this)
     var bot: TelegramBot by Delegates.notNull()
     var youtube: YouTube by Delegates.notNull()
     var keyIndex = 0
