@@ -23,20 +23,28 @@ class SubscriptionsTask(val instance: YoutubeBot, val timer: Timer): TimerTask()
                 .joinToString(",")
         channelList.fields = "items(id,contentDetails/relatedPlaylists/uploads)"
 
-        channelList.execute().items.forEach { e -> run() {
-            var uploadsList = youtube.playlistItems().list("id,snippet")
+        try {
+            channelList.execute().items.forEach { e -> run() {
+                var uploadsList = youtube.playlistItems().list("id,snippet")
 
-            uploadsList.key = channelList.key
-            uploadsList.playlistId = e.contentDetails.relatedPlaylists.uploads
-            uploadsList.fields = "items(id,snippet/publishedAt,snippet/resourceId/videoId," +
-                    "snippet/playlistId,snippet/title,snippet/channelId)"
+                uploadsList.key = channelList.key
+                uploadsList.playlistId = e.contentDetails.relatedPlaylists.uploads
+                uploadsList.fields = "items(id,snippet/publishedAt,snippet/resourceId/videoId," +
+                        "snippet/playlistId,snippet/title,snippet/channelId)"
 
-            uploadsList.execute().items
-            uploadsList.queue(batch, callback)
-        }}
+                uploadsList.execute().items
+                uploadsList.queue(batch, callback)
+            }}
+        } catch (e: Exception) {
+            e.printStackTrace() // continue execution
+        }
 
         if (batch.size() >= 1) {
-            batch.execute()
+            try {
+                batch.execute()
+            } catch (e: Exception) {
+                e.printStackTrace() // continue execution
+            }
         }
 
         println("checked for new videos")
