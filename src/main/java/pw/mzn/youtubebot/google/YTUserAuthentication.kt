@@ -8,6 +8,9 @@ import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.jackson2.JacksonFactory
 import pro.zackpollard.telegrambot.api.event.chat.message.CommandMessageReceivedEvent
 import pw.mzn.youtubebot.YoutubeBot
+import java.net.URL
+import java.util.regex.Pattern
+import kotlin.properties.Delegates
 
 class YTUserAuthentication(val instance: YoutubeBot, val clientId: String, val clientSecret: String) {
     val codeFlow = GoogleAuthorizationCodeFlow(NetHttpTransport(), JacksonFactory(), clientId, clientSecret, listOf("https://www.googleapis.com/auth/youtube.readonly"))
@@ -22,7 +25,8 @@ class YTUserAuthentication(val instance: YoutubeBot, val clientId: String, val c
 
         if (credential == null) {
             var authUrl = codeFlow.newAuthorizationUrl()
-                    .setRedirectUri("https://telegram.me/YoutubeMusic_Bot?start=login-$chatId-")
+                    .setRedirectUri("https://telegram.me/YoutubeMusic_Bot?start=login-")
+            authUrl.state = event.chat.id
             var rawUrl = authUrl.build()
 
             event.chat.sendMessage("Open this link to sign into Youtube first:\n$rawUrl")
@@ -31,17 +35,17 @@ class YTUserAuthentication(val instance: YoutubeBot, val clientId: String, val c
         }
     }
 
-    fun processAuth(raw: List<String>, event: CommandMessageReceivedEvent) {
-        var code = raw[2]
-        var chatId = raw[1]
-        var tokenRequest = codeFlow.newTokenRequest(code)
+    fun processAuth(raw: String, event: CommandMessageReceivedEvent) {
+        println(raw)
+        return
+        /*var tokenRequest = codeFlow.newTokenRequest(code)
 
-        tokenRequest.redirectUri = "https://telegram.me/YoutubeMusic_Bot?start=login-$chatId-$code"
+        tokenRequest.redirectUri = "https://telegram.me/YoutubeMusic_Bot?start=login-"
         var credential = codeFlow.createAndStoreCredential(tokenRequest.execute(), chatId)
         event.chat.sendMessage("Successfully logged in!\nFetching subscriptions from there...")
 
         updateData()
-        instance.follower.checkup(credential, chatId)
+        instance.follower.checkup(credential, chatId)*/
     }
 
     fun processLogout(event: CommandMessageReceivedEvent) {
