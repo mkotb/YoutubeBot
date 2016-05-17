@@ -14,14 +14,24 @@ class Follower(val instance: YoutubeBot) {
     }
 
     fun checkup(cred: Credential, chatId: String) {
+        checkup(cred, chatId, null)
+    }
+
+    fun checkup(cred: Credential, chatId: String, token: String?) {
         var request = instance.youtube.subscriptions().list("id,snippet")
-                .setMine(true).setOauthToken(cred.accessToken)
+                .setMine(true)
+                .setOauthToken(cred.accessToken)
+                .setMaxResults(50L)
+
+        if (token != null)
+            request.pageToken = token
+
         println("created request")
         var response = request.execute()
         println("executed")
 
         response.items.forEach { e -> run {
-            println("going through ${e.snippet.channelTitle}")
+            println("going through ${e.snippet.title}")
             var channelId = e.snippet.channelId
             var savedChannel = instance.dataManager.channelBy(channelId)
 
@@ -30,20 +40,26 @@ class Follower(val instance: YoutubeBot) {
 
                 following.add(chatId.toLong())
                 instance.dataManager.channels.add(SavedChannel(channelId,
-                        e.snippet.channelTitle, following))
+                        e.snippet.title, following))
                 instance.dataManager.saveToFile()
 
-                instance.bot.getChat(chatId).sendMessage("Updated! Successfully subscribed to ${e.snippet.channelTitle}")
+                instance.bot.getChat(chatId).sendMessage("Updated! Successfully subscribed to ${e.snippet.title}")
+                println("created $channelId, saved to file and did all the stuffs")
                 return@run
             }
 
             if (!savedChannel.subscribed.contains(chatId.toLong())) {
                 savedChannel.subscribed.add(chatId.toLong())
-                instance.bot.getChat(chatId).sendMessage("Updated! Successfully subscribed to ${e.snippet.channelTitle}")
+                println("added to existing")
+                instance.bot.getChat(chatId).sendMessage("Updated! Successfully subscribed to ${e.snippet.title}")
             }
 
             instance.dataManager.saveToFile()
+            println("saved to file")
         } }
+
+        if (response.nextPageToken != null || response.nextPageToken != "")
+            checkup(cred, chatId, response.nextPageToken) // mfw that many subscriptions
     }
 }
 
