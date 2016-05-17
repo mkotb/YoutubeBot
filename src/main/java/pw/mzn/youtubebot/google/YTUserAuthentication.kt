@@ -42,6 +42,7 @@ class YTUserAuthentication(val instance: YoutubeBot, val clientId: String, val c
         if (credential == null) {
             var authUrl = codeFlow.newAuthorizationUrl()
                     .setRedirectUri("http://chinese.food.internal.is/start")
+                    .setAccessType("offline")
             authUrl.state = event.chat.id
             var rawUrl = authUrl.build()
 
