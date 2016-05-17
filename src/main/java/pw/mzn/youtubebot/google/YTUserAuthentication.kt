@@ -6,6 +6,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.jackson2.JacksonFactory
+import com.google.api.client.util.store.MemoryDataStoreFactory
 import com.google.common.cache.CacheBuilder
 import org.wasabi.app.AppConfiguration
 import org.wasabi.app.AppServer
@@ -17,7 +18,10 @@ class YTUserAuthentication(val instance: YoutubeBot, val clientId: String, val c
     val codes = CacheBuilder.newBuilder().concurrencyLevel(5)
             .expireAfterWrite(1, TimeUnit.HOURS)
             .build<String, String>()
-    val codeFlow = GoogleAuthorizationCodeFlow(NetHttpTransport(), JacksonFactory(), clientId, clientSecret, listOf("https://www.googleapis.com/auth/youtube.readonly"))
+    val codeFlow = GoogleAuthorizationCodeFlow.Builder(NetHttpTransport(), JacksonFactory(), clientId, clientSecret,
+            listOf("https://www.googleapis.com/auth/youtube.readonly"))
+            .setCredentialDataStore(MemoryDataStoreFactory.getDefaultInstance().getDataStore("ytdl-auth"))
+            .build()
     val httpServer = AppServer(AppConfiguration(80))
 
     init {
