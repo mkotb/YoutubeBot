@@ -14,10 +14,10 @@ class Follower(val instance: YoutubeBot) {
     }
 
     fun checkup(cred: Credential, chatId: String) {
-        checkup(cred, chatId, null)
+        checkup(cred, chatId, null, 0, 1)
     }
 
-    fun checkup(cred: Credential, chatId: String, token: String?) {
+    fun checkup(cred: Credential, chatId: String, token: String?, left: Int, times: Int) {
         var request = instance.youtube.subscriptions().list("id,snippet")
                 .setMine(true)
                 .setOauthToken(cred.accessToken)
@@ -36,30 +36,32 @@ class Follower(val instance: YoutubeBot) {
             var savedChannel = instance.dataManager.channelBy(channelId)
 
             if (savedChannel == null) {
+                println("it's null")
                 var following = ArrayList<Long>()
 
                 following.add(chatId.toLong())
                 instance.dataManager.channels.add(SavedChannel(channelId,
                         e.snippet.title, following))
+                println("made new channel, that's nice")
                 instance.dataManager.saveToFile()
 
                 instance.bot.getChat(chatId).sendMessage("Updated! Successfully subscribed to ${e.snippet.title}")
                 println("created $channelId, saved to file and did all the stuffs")
                 return@run
-            }
-
-            if (!savedChannel.subscribed.contains(chatId.toLong())) {
+            } else if (!savedChannel.subscribed.contains(chatId.toLong())) {
                 savedChannel.subscribed.add(chatId.toLong())
                 println("added to existing")
                 instance.bot.getChat(chatId).sendMessage("Updated! Successfully subscribed to ${e.snippet.title}")
+            } else {
+                println("they're already subscribed, apparently")
             }
 
             instance.dataManager.saveToFile()
             println("saved to file")
         } }
 
-        if (response.nextPageToken != null || response.nextPageToken != "")
-            checkup(cred, chatId, response.nextPageToken) // mfw that many subscriptions
+        if (response.pageInfo.resultsPerPage * times < response.pageInfo.totalResults + left)
+            checkup(cred, chatId, response.nextPageToken, response.pageInfo.totalResults + left, times + 1) // mfw that many subscriptions
     }
 }
 
