@@ -18,7 +18,7 @@ class YTUserAuthentication(val instance: YoutubeBot, val clientId: String, val c
             .expireAfterWrite(1, TimeUnit.HOURS)
             .build<String, String>()
     val codeFlow = GoogleAuthorizationCodeFlow(NetHttpTransport(), JacksonFactory(), clientId, clientSecret, listOf("https://www.googleapis.com/auth/youtube.readonly"))
-    val httpServer = AppServer(AppConfiguration(35870))
+    val httpServer = AppServer(AppConfiguration(80))
 
     init {
         instance.dataManager.credentials.forEach { e -> codeFlow.credentialDataStore.set(e.key, e.value) }
@@ -37,7 +37,7 @@ class YTUserAuthentication(val instance: YoutubeBot, val clientId: String, val c
 
         if (credential == null) {
             var authUrl = codeFlow.newAuthorizationUrl()
-                    .setRedirectUri("http://chinese.food.internal.is:35870/start")
+                    .setRedirectUri("http://chinese.food.internal.is/start")
             authUrl.state = event.chat.id
             var rawUrl = authUrl.build()
 
@@ -51,7 +51,7 @@ class YTUserAuthentication(val instance: YoutubeBot, val clientId: String, val c
         var code = codes.asMap()[event.chat.id] ?: return
         var tokenRequest = codeFlow.newTokenRequest(code)
 
-        tokenRequest.redirectUri = "http://chinese.food.internal.is:35870/start"
+        tokenRequest.redirectUri = "http://chinese.food.internal.is/start"
         var credential = codeFlow.createAndStoreCredential(tokenRequest.execute(), chatId)
         event.chat.sendMessage("Successfully logged in!\nFetching subscriptions from there...")
 
