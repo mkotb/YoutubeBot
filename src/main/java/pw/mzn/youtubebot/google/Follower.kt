@@ -9,10 +9,6 @@ import java.util.concurrent.TimeUnit
 class Follower(val instance: YoutubeBot) {
     val timer = Timer()
 
-    init {
-        FollowerTask(this).run()
-    }
-
     fun checkup(cred: Credential, chatId: String) {
         checkup(cred, chatId, null, 0, 1)
     }

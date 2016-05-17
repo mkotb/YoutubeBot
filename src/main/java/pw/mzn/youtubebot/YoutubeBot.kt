@@ -14,6 +14,7 @@ import pw.mzn.youtubebot.data.DataManager
 import pw.mzn.youtubebot.data.SavedChannel
 import pw.mzn.youtubebot.extra.*
 import pw.mzn.youtubebot.google.Follower
+import pw.mzn.youtubebot.google.FollowerTask
 import pw.mzn.youtubebot.google.SubscriptionsTask
 import pw.mzn.youtubebot.google.YTUserAuthentication
 import pw.mzn.youtubebot.handler.CommandHandler
@@ -61,6 +62,8 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
         youtube = YouTube.Builder(NetHttpTransport(), JacksonFactory(), HttpRequestInitializer {  })
                 .setApplicationName("ayylmaoproj") // don't ask
                 .build()
+
+        FollowerTask(follower).run()
 
         println("Logged into Telegram!")
 

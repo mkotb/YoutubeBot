@@ -71,6 +71,7 @@ class YTUserAuthentication(val instance: YoutubeBot, val clientId: String, val c
         if (credential == null) {
             event.chat.sendMessage("You aren't logged in!")
         } else {
+            // TODO revoke key
             codeFlow.credentialDataStore.delete(chatId)
             updateData()
             event.chat.sendMessage("Successfully logged out!")
