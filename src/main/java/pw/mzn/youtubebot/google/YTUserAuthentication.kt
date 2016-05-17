@@ -20,7 +20,7 @@ class YTUserAuthentication(val instance: YoutubeBot, val clientId: String, val c
             .build<String, String>()
     val codeFlow = GoogleAuthorizationCodeFlow.Builder(NetHttpTransport(), JacksonFactory(), clientId, clientSecret,
             listOf("https://www.googleapis.com/auth/youtube.readonly"))
-            .setCredentialDataStore(MemoryDataStoreFactory.getDefaultInstance().getDataStore("ytdl-auth"))
+            .setCredentialDataStore(MemoryDataStoreFactory.getDefaultInstance().getDataStore("ytdlauth"))
             .build()
     val httpServer = AppServer(AppConfiguration(80))
 
