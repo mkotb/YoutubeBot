@@ -27,33 +27,25 @@ class Follower(val instance: YoutubeBot) {
         println("executed")
 
         response.items.forEach { e -> run {
-            println("going through ${e.snippet.title}, ${e.snippet.channelId}")
-            var channelId = e.snippet.channelId
+            var channelId = e.snippet.resourceId.channelId
             var savedChannel = instance.dataManager.channelBy(channelId)
 
             if (savedChannel == null) {
-                println("it's null")
                 var following = ArrayList<Long>()
 
                 following.add(chatId.toLong())
                 instance.dataManager.channels.add(SavedChannel(channelId,
                         e.snippet.title, following))
-                println("made new channel, that's nice")
                 instance.dataManager.saveToFile()
 
                 instance.bot.getChat(chatId).sendMessage("Updated! Successfully subscribed to ${e.snippet.title}")
-                println("created $channelId, saved to file and did all the stuffs")
                 return@run
             } else if (!savedChannel.subscribed.contains(chatId.toLong())) {
                 savedChannel.subscribed.add(chatId.toLong())
-                println("added to existing")
                 instance.bot.getChat(chatId).sendMessage("Updated! Successfully subscribed to ${e.snippet.title}")
-            } else {
-                println("they're already subscribed, apparently")
             }
 
             instance.dataManager.saveToFile()
-            println("saved to file")
         } }
 
         if (response.pageInfo.resultsPerPage * times < response.pageInfo.totalResults + left)
