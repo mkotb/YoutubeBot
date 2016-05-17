@@ -16,9 +16,12 @@ class Follower(val instance: YoutubeBot) {
     fun checkup(cred: Credential, chatId: String) {
         var request = instance.youtube.subscriptions().list("id,snippet")
                 .setMine(true).setOauthToken(cred.accessToken)
+        println("created request")
         var response = request.execute()
+        println("executed")
 
         response.items.forEach { e -> run {
+            println("going through ${e.snippet.channelTitle}")
             var channelId = e.snippet.channelId
             var savedChannel = instance.dataManager.channelBy(channelId)
 

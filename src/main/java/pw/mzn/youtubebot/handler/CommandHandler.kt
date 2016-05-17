@@ -83,7 +83,6 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
          if ("start".equals(event.command)) {
              if (event.args.size > 0) {
-                 println(event.args[0])
                  if (event.args[0].startsWith("login")) {
                      instance.youtubeUserAuth.processAuth(event.args[0].replace("login-", ""), event)
                      return
