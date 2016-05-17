@@ -27,7 +27,7 @@ class Follower(val instance: YoutubeBot) {
         println("executed")
 
         response.items.forEach { e -> run {
-            println("going through ${e.snippet.title}")
+            println("going through ${e.snippet.title}, ${e.snippet.channelId}")
             var channelId = e.snippet.channelId
             var savedChannel = instance.dataManager.channelBy(channelId)
 
