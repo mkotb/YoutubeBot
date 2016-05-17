@@ -40,6 +40,12 @@
             <artifactId>google-api-services-youtube</artifactId>
             <version>v3-rev165-1.21.0</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.wasabi</groupId>
+            <artifactId>wasabi</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 
     <build>

@@ -6,17 +6,29 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.jackson2.JacksonFactory
+import com.google.common.cache.CacheBuilder
+import org.wasabi.app.AppConfiguration
+import org.wasabi.app.AppServer
 import pro.zackpollard.telegrambot.api.event.chat.message.CommandMessageReceivedEvent
 import pw.mzn.youtubebot.YoutubeBot
-import java.net.URL
-import java.util.regex.Pattern
-import kotlin.properties.Delegates
+import java.util.concurrent.TimeUnit
 
 class YTUserAuthentication(val instance: YoutubeBot, val clientId: String, val clientSecret: String) {
+    val codes = CacheBuilder.newBuilder().concurrencyLevel(5)
+            .expireAfterWrite(1, TimeUnit.HOURS)
+            .build<String, String>()
     val codeFlow = GoogleAuthorizationCodeFlow(NetHttpTransport(), JacksonFactory(), clientId, clientSecret, listOf("https://www.googleapis.com/auth/youtube.readonly"))
+    val httpServer = AppServer(AppConfiguration(35870))
 
     init {
         instance.dataManager.credentials.forEach { e -> codeFlow.credentialDataStore.set(e.key, e.value) }
+
+        httpServer.get("/start", {
+            codes.put(request.queryParams["state"], request.queryParams["code"])
+            response.redirect("https://telegram.me/${instance.bot.botUsername}?start=login-${request.queryParams["state"]}")
+        })
+
+        httpServer.start(false)
     }
 
     fun processLogin(event: CommandMessageReceivedEvent) {
@@ -25,7 +37,7 @@ class YTUserAuthentication(val instance: YoutubeBot, val clientId: String, val c
 
         if (credential == null) {
             var authUrl = codeFlow.newAuthorizationUrl()
-                    .setRedirectUri("https://telegram.me/YoutubeMusic_Bot?start=login-")
+                    .setRedirectUri("http://chinese.food.internal.is:35870/start")
             authUrl.state = event.chat.id
             var rawUrl = authUrl.build()
 
@@ -35,17 +47,16 @@ class YTUserAuthentication(val instance: YoutubeBot, val clientId: String, val c
         }
     }
 
-    fun processAuth(raw: String, event: CommandMessageReceivedEvent) {
-        println(raw)
-        return
-        /*var tokenRequest = codeFlow.newTokenRequest(code)
+    fun processAuth(chatId: String, event: CommandMessageReceivedEvent) {
+        var code = codes.asMap()[event.chat.id] ?: return
+        var tokenRequest = codeFlow.newTokenRequest(code)
 
-        tokenRequest.redirectUri = "https://telegram.me/YoutubeMusic_Bot?start=login-"
+        tokenRequest.redirectUri = "http://chinese.food.internal.is:35870/start"
         var credential = codeFlow.createAndStoreCredential(tokenRequest.execute(), chatId)
         event.chat.sendMessage("Successfully logged in!\nFetching subscriptions from there...")
 
         updateData()
-        instance.follower.checkup(credential, chatId)*/
+        instance.follower.checkup(credential, chatId)
     }
 
     fun processLogout(event: CommandMessageReceivedEvent) {
