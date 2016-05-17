@@ -74,7 +74,7 @@ class YTUserAuthentication(val instance: YoutubeBot, val clientId: String, val c
 
     fun updateData() {
         instance.dataManager.credentials.clear()
-        codeFlow.credentialDataStore.keySet().forEach { key -> instance.dataManager.credentials.put(key,
+        codeFlow.credentialDataStore?.keySet()?.forEach { key -> instance.dataManager.credentials.put(key,
                 codeFlow.credentialDataStore.get(key)) }
         instance.dataManager.saveToFile()
     }
