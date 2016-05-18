@@ -30,6 +30,8 @@ class SubscriptionsTask(val instance: YoutubeBot, val timer: Timer): TimerTask()
             channelList.queue(batch, ChannelCallback(instance, channelList.key))
         } }
 
+        println("batching ${batch.size()} requests")
+
         if (batch.size() >= 1) {
             try {
                 batch.execute()
@@ -38,7 +40,7 @@ class SubscriptionsTask(val instance: YoutubeBot, val timer: Timer): TimerTask()
             }
         }
 
-        println("checked for new videos ${batch.size()} requests batched")
+        println("checked for new videos")
         timer.schedule(SubscriptionsTask(instance, timer), TimeUnit.MINUTES.toMillis(30L)) // faire, aller, voir, avoir, etre
     }
 }
@@ -60,6 +62,8 @@ class ChannelCallback(val instance: YoutubeBot, val key: String): JsonBatchCallb
             uploadsList.queue(batch, callback)
         }}
 
+        println("batched ${batch.size()} queries")
+
         if (batch.size() >= 1) {
             try {
                 batch.execute()
@@ -67,8 +71,6 @@ class ChannelCallback(val instance: YoutubeBot, val key: String): JsonBatchCallb
                 e.printStackTrace() // continue execution
             }
         }
-
-        println("batched ${batch.size()} queries")
     }
 
     override fun onFailure(p0: GoogleJsonError?, p1: HttpHeaders?) {
