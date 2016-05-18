@@ -67,6 +67,8 @@ class ChannelCallback(val instance: YoutubeBot, val key: String): JsonBatchCallb
                 e.printStackTrace() // continue execution
             }
         }
+
+        println("batched ${batch.size()} queries")
     }
 
     override fun onFailure(p0: GoogleJsonError?, p1: HttpHeaders?) {
