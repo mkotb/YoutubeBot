@@ -38,7 +38,7 @@ class SubscriptionsTask(val instance: YoutubeBot, val timer: Timer): TimerTask()
             }
         }
 
-        println("checked for new videos")
+        println("checked for new videos ${batch.size()} requests batched")
         timer.schedule(SubscriptionsTask(instance, timer), TimeUnit.MINUTES.toMillis(30L)) // faire, aller, voir, avoir, etre
     }
 }
