@@ -88,7 +88,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
         println("Finished downloading youtube-dl executable")
     }
 
-    fun searchChannel(query: String): List<CachedYoutubeChannel> {
+    fun searchChannel(query: String): List<CachedYoutubeChannel> { // TODO take advantage of e.snippet.customUrl
         var search = youtube.search().list("id,snippet")
 
         search.q = query

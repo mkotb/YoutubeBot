@@ -4,7 +4,9 @@ import com.google.api.client.googleapis.batch.json.JsonBatchCallback
 import com.google.api.client.googleapis.json.GoogleJsonError
 import com.google.api.client.http.HttpHeaders
 import com.google.api.client.util.DateTime
+import com.google.api.services.youtube.model.ChannelListResponse
 import com.google.api.services.youtube.model.PlaylistItemListResponse
+import com.google.common.collect.Lists
 import pro.zackpollard.telegrambot.api.chat.message.send.ParseMode
 import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage
 import pw.mzn.youtubebot.YoutubeBot
@@ -13,31 +15,20 @@ import java.util.concurrent.TimeUnit
 
 class SubscriptionsTask(val instance: YoutubeBot, val timer: Timer): TimerTask() {
     override fun run() {
-        var callback = SubscriptionCallback(instance)
         var youtube = instance.youtube
+        var channels = instance.dataManager.channels.map { e -> e.channelId }
         var batch = youtube.batch()
-        var channelList = youtube.channels().list("id,contentDetails")
+        var channelsList = Lists.partition(channels, 5)
 
-        channelList.key = instance.googleKeys[instance.nextKeyIndex()]
-        channelList.id = instance.dataManager.channels.map { e -> e.channelId }
-                .joinToString(",")
-        channelList.fields = "items(id,contentDetails/relatedPlaylists/uploads)"
+        channelsList.forEach { e -> run() {
+            var channelList = youtube.channels().list("id,contentDetails")
 
-        try {
-            channelList.execute().items.forEach { e -> run() {
-                var uploadsList = youtube.playlistItems().list("id,snippet")
+            channelList.key = instance.googleKeys[instance.nextKeyIndex()]
+            channelList.id = e.joinToString(",")
+            channelList.fields = "items(id,contentDetails/relatedPlaylists/uploads)"
 
-                uploadsList.key = channelList.key
-                uploadsList.playlistId = e.contentDetails.relatedPlaylists.uploads
-                uploadsList.fields = "items(id,snippet/publishedAt,snippet/resourceId/videoId," +
-                        "snippet/playlistId,snippet/title,snippet/channelId)"
-
-                uploadsList.execute().items
-                uploadsList.queue(batch, callback)
-            }}
-        } catch (e: Exception) {
-            e.printStackTrace() // continue execution
-        }
+            channelList.queue(batch, ChannelCallback(instance, channelList.key))
+        } }
 
         if (batch.size() >= 1) {
             try {
@@ -49,6 +40,37 @@ class SubscriptionsTask(val instance: YoutubeBot, val timer: Timer): TimerTask()
 
         println("checked for new videos")
         timer.schedule(SubscriptionsTask(instance, timer), TimeUnit.MINUTES.toMillis(30L)) // faire, aller, voir, avoir, etre
+    }
+}
+
+class ChannelCallback(val instance: YoutubeBot, val key: String): JsonBatchCallback<ChannelListResponse>() {
+    override fun onSuccess(response: ChannelListResponse?, p1: HttpHeaders?) {
+        var batch = instance.youtube.batch()
+        var callback = SubscriptionCallback(instance)
+
+        response?.items?.forEach { e -> run() {
+            var uploadsList = instance.youtube.playlistItems().list("id,snippet")
+
+            uploadsList.key = key
+            uploadsList.playlistId = e.contentDetails.relatedPlaylists.uploads
+            uploadsList.fields = "items(id,snippet/publishedAt,snippet/resourceId/videoId," +
+                    "snippet/playlistId,snippet/title,snippet/channelId)"
+
+            uploadsList.execute().items
+            uploadsList.queue(batch, callback)
+        }}
+
+        if (batch.size() >= 1) {
+            try {
+                batch.execute()
+            } catch (e: Exception) {
+                e.printStackTrace() // continue execution
+            }
+        }
+    }
+
+    override fun onFailure(p0: GoogleJsonError?, p1: HttpHeaders?) {
+        throw UnsupportedOperationException()
     }
 }
 
