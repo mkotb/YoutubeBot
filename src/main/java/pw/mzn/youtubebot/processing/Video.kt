@@ -84,7 +84,7 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
                 Files.copy(res.body, Paths.get("$id.jpg"))
             }
 
-            instance.setThumbnail(id, File(""))
+            instance.setThumbnail(id, File(File("").absolutePath))
         }
 
         return YoutubeVideo(id, File("$id.mp3")).fetchMetadata()
