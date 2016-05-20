@@ -172,7 +172,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         var videoMatcher = instance.videoRegex.matcher(link)
         var playlistMatcher = instance.playlistRegex.matcher(link)
         var matchesVideo = videoMatcher.find()
-        var matchesPlaylist = playlistMatcher.find()
+        var matchesPlaylist = playlistMatcher.find() && link.contains("playlist")
 
         flushSessions(userId, chat.id)
 
