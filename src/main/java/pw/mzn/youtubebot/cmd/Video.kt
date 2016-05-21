@@ -82,32 +82,34 @@ class VideoCommandHolder(val instance: YoutubeBot) {
             return
         }
 
-        var options = optionz ?: VideoOptions()
+        Thread(Runnable() {
+            var options = optionz ?: VideoOptions()
 
-        instance.commandHandler.timeoutCache.put(userId, Object())
-        var reply = SendableTextMessage.builder()
-                .message("Downloading video and extracting audio (Depending on duration of video, " +
-                        "this may take a while)")
-        var hide = ReplyKeyboardHide.builder()
+            instance.commandHandler.timeoutCache.put(userId, Object())
+            var reply = SendableTextMessage.builder()
+                    .message("Downloading video and extracting audio (Depending on duration of video, " +
+                            "this may take a while)")
+            var hide = ReplyKeyboardHide.builder()
 
-        if (originalQuery != null) {
-            hide.selective(true)
-            reply.replyTo(originalQuery)
-        }
+            if (originalQuery != null) {
+                hide.selective(true)
+                reply.replyTo(originalQuery)
+            }
 
-        reply.replyMarkup(hide.build())
-        chat.sendMessage(reply.build())
-        var video = instance.downloadVideo(options, videoId)
+            reply.replyMarkup(hide.build())
+            chat.sendMessage(reply.build())
+            var video = instance.downloadVideo(options, videoId)
 
-        if (!"N/A".equals(options.customTitle)) {
-            video.customTitle = options.customTitle
-        }
+            if (!"N/A".equals(options.customTitle)) {
+                video.customTitle = options.customTitle
+            }
 
-        if (!"N/A".equals(options.customPerformer)) {
-            video.customPerformer = options.customPerformer
-        }
+            if (!"N/A".equals(options.customPerformer)) {
+                video.customPerformer = options.customPerformer
+            }
 
-        sendProcessedVideo(video, originalQuery, chat, userId, linkSent, options)
+            sendProcessedVideo(video, originalQuery, chat, userId, linkSent, options)
+        }, "YoutubeBot $videoId Thread").start()
     }
 
     fun sendProcessedVideo(video: YoutubeVideo, originalQuery: Message?, chat: Chat,
