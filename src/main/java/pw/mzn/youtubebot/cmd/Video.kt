@@ -5,6 +5,7 @@ import pro.zackpollard.telegrambot.api.chat.CallbackQuery
 import pro.zackpollard.telegrambot.api.chat.Chat
 import pro.zackpollard.telegrambot.api.chat.GroupChat
 import pro.zackpollard.telegrambot.api.chat.message.Message
+import pro.zackpollard.telegrambot.api.chat.message.content.AudioContent
 import pro.zackpollard.telegrambot.api.chat.message.content.TextContent
 import pro.zackpollard.telegrambot.api.chat.message.send.ParseMode
 import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage
@@ -21,6 +22,7 @@ import java.util.concurrent.TimeUnit
 
 class VideoCommandHolder(val instance: YoutubeBot) {
     val videoSessions = IdList<VideoSession>()
+    val matchingStore = ConcurrentHashMap<Long, MatchSession>()
     val videoSearch = ConcurrentHashMap<Long, List<CachedYoutubeVideo>>()
     val trackStore = ConcurrentHashMap<Long, TrackSession>()
     val titleCache = CacheBuilder.newBuilder()
@@ -29,12 +31,33 @@ class VideoCommandHolder(val instance: YoutubeBot) {
             .build<String, String>() // key = video id, val = title
 
     fun sendVideo(chat: Chat, link: String, linkSent: Boolean, originalQuery: Message?, userId: Long,
-                  optionz: VideoOptions?, duration: Long, title: String) {
+                  optionz: VideoOptions?, duration: Long, title: String, ignoreSaved: Boolean) {
+        var session = VideoSession(instance, chat.id, link, VideoOptions(0, duration), chat, linkSent, userId, originalQuery, duration)
+        var regex = instance.videoRegex.matcher(link)
+        regex.matches()
+        var videoId = regex.group(1)
+        var savedMatches = instance.dataManager.videosBy(videoId)
+
+        if (savedMatches.isNotEmpty() && !ignoreSaved) {
+            matchingStore.put(userId, MatchSession(session, videoId))
+            var keyboardBuilder = ReplyKeyboardMarkup.builder()
+
+            keyboardBuilder.selective(true)
+            keyboardBuilder.addRow(KeyboardButton.builder().text("Do not use preset").build())
+            savedMatches.forEach { e -> keyboardBuilder.addRow(KeyboardButton.builder().text(e.formattedName(instance)).build()) }
+
+            chat.sendMessage(SendableTextMessage.builder()
+                    .replyTo(originalQuery!!)
+                    .message("I found some song presets which matches your query, please select the one which matches your search best")
+                    .replyMarkup(keyboardBuilder.build())
+                    .build())
+            return
+        }
+
         var search = instance.searchTrack(title).toMutableList()
 
         if (((chat is GroupChat) || optionz == null) && !search.isEmpty()) {
             var track = search[0]
-            var session = VideoSession(instance, chat.id, link, VideoOptions(0, duration), chat, linkSent, userId, originalQuery, duration)
             var replyKeyboard = InlineKeyboardMarkup.builder()
                     .addRow(InlineKeyboardButton.builder().text("Yes").callbackData("lf.y").build(),
                             InlineKeyboardButton.builder().text("No").callbackData("lf.n").build())
@@ -54,7 +77,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
         }
 
         if ((chat !is GroupChat) && optionz == null) {
-            var id = videoSessions.add(VideoSession(instance, chat.id, link, VideoOptions(0, duration), chat, linkSent, userId, originalQuery, duration))
+            var id = videoSessions.add(session)
             initCustomization(id, originalQuery, chat)
             return
         }
@@ -74,21 +97,25 @@ class VideoCommandHolder(val instance: YoutubeBot) {
 
         reply.replyMarkup(hide.build())
         chat.sendMessage(reply.build())
-        var regex = instance.videoRegex.matcher(link)
-        regex.matches()
-        var video = instance.downloadVideo(options, regex.group(1))
+        var video = instance.downloadVideo(options, videoId)
+
+        if (!"N/A".equals(options.customTitle)) {
+            video.customTitle = options.customTitle
+        }
+
+        if (!"N/A".equals(options.customPerformer)) {
+            video.customPerformer = options.customPerformer
+        }
+
+        sendProcessedVideo(video, originalQuery, chat, userId, linkSent, options)
+    }
+
+    fun sendProcessedVideo(video: YoutubeVideo, originalQuery: Message?, chat: Chat,
+                           userId: Long, linkSent: Boolean, options: VideoOptions?) {
         var audio = video.sendable()
 
         if (originalQuery != null) {
             audio.replyTo(originalQuery)
-        }
-
-        if (!"N/A".equals(options.customTitle)) {
-            audio.title(options.customTitle)
-        }
-
-        if (!"N/A".equals(options.customPerformer)) {
-            audio.performer(options.customPerformer)
         }
 
         var audioMessage = chat.sendMessage(audio.build())
@@ -105,6 +132,24 @@ class VideoCommandHolder(val instance: YoutubeBot) {
 
         File("${video.id}.info.json").delete()
         removeVideoSession(chat.id)
+
+        if (options != null) {
+            if (options.speed != 1.0) { // nobody likes nightcore
+                return
+            }
+
+            if (!video.metadata.name.toLowerCase().contains(options.customPerformer.toLowerCase())) { // quality control
+                return
+            }
+
+            if (!video.metadata.name.toLowerCase().contains(options.customTitle.toLowerCase())) { // quality control
+                return
+            }
+
+            video.fileId = (audioMessage.content as AudioContent).content.fileId
+            instance.dataManager.videos.add(video)
+            instance.dataManager.saveToFile()
+        }
     }
 
     fun descriptionFor(video: YoutubeVideo, linkSent: Boolean): String {
@@ -265,7 +310,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
             return
         }
 
-        sendVideo(event.chat, link, false, event.message, userId, null, duration, titleCache.asMap()[selected.videoId]!!)
+        sendVideo(event.chat, link, false, event.message, userId, null, duration, titleCache.asMap()[selected.videoId]!!, false)
     }
 
     fun processSearch(chat: Chat, query: String, userId: Long, originalMessage: Message) {
@@ -305,6 +350,33 @@ class VideoCommandHolder(val instance: YoutubeBot) {
                 .build()
 
         chat.sendMessage(message)
+    }
+
+    fun processMatchSelection(event: TextMessageReceivedEvent) {
+        var userId = event.message.sender.id
+        var matchSession = matchingStore[userId]!!
+        var videoId = matchSession.videoId
+        var session = matchSession.videoSession
+        var matches = instance.dataManager.videosBy(videoId)
+        var content = event.content.content
+
+        if ("Do not use preset".equals(content)) {
+            sendVideo(session.chat, session.link, session.linkSent, session.originalQuery, session.userId,
+                    session.options, session.duration, titleCache.asMap()[session.videoId]!!, true)
+            matchingStore.remove(userId)
+            return
+        }
+
+        var matched = matches.filter { e -> e.formattedName(instance).equals(content) }.firstOrNull()
+
+        if (matched == null) {
+            event.chat.sendMessage("That is not a valid selection! Please try again")
+            return
+        }
+
+        event.chat.sendMessage("Using preset...")
+        sendProcessedVideo(matched, session.originalQuery, session.chat, session.userId, session.linkSent,
+                session.options)
     }
 
     fun removeVideoSession(chatId: String) {
@@ -352,7 +424,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
             callback.answer("Sending to processing queue...", false)
             session.options.thumbnailUrl = session.thumbnail
             sendVideo(session.chat, session.link, session.linkSent, session.originalQuery, session.userId,
-                    session.options, session.duration, titleCache.asMap()[session.videoId]!!)
+                    session.options, session.duration, titleCache.asMap()[session.videoId]!!, true)
             return
         }
 

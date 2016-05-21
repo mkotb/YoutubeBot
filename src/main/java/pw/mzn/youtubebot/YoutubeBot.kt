@@ -35,7 +35,6 @@ import kotlin.system.exitProcess
 
 class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String, youtubeClientId: String, youtubeClientSecret: String) {
     val executor = Executors.newFixedThreadPool(2)
-    val titleRegex = Pattern.compile("(\\[|\\()(.*?)(\\]|\\))")
     val playlistRegex = Pattern.compile("^.*(youtu\\.be\\/|list=)([^#&?]*).*")
     val videoRegex = Pattern.compile("^(?:https?:\\/\\/)?(?:www\\.)?(?:youtube\\.com|youtu\\.be)\\/watch\\?v=([^&]+)")
     val dataManager = DataManager()
@@ -362,8 +361,41 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
         return cover
     }
 
-    fun cleanTitle(title: String): String {
-        return title.replace(titleRegex.toRegex(), "").trim()
+    fun cleanTitle(titl: String): String {
+        var title = titl // change to var
+        var bracketIndex = title.indexOf('[')
+
+        if (bracketIndex == -1) {
+            bracketIndex = title.indexOf('(')
+        }
+
+        while (bracketIndex != -1) {
+            var endBracketIndex = title.indexOf(']', bracketIndex)
+
+            if (endBracketIndex == -1) {
+                endBracketIndex = title.indexOf(')', bracketIndex)
+            }
+
+            if (endBracketIndex == -1) {
+                break; // rip
+            }
+
+            var contents = title.substring(bracketIndex, endBracketIndex)
+            var oldIndex = bracketIndex
+            bracketIndex = title.indexOf('[', oldIndex)
+
+            if (bracketIndex == -1) {
+                bracketIndex = title.indexOf('(', oldIndex)
+            }
+
+            if (contents.toLowerCase().contains("remix")) {
+                continue
+            }
+
+            title = title.replace(title.substring(bracketIndex, endBracketIndex + 1), "")
+        }
+
+        return title.trim()
     }
 
     fun searchImage(query: String): String {

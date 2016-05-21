@@ -143,6 +143,11 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             return
         }
 
+        if (video.matchingStore.containsKey(event.message.sender.id)) {
+            video.processMatchSelection(event)
+            return
+        }
+
         if (subscription.channelSearch.containsKey(event.chat.id.toLong())) {
             subscription.processChannelSelection(event)
             return
@@ -226,7 +231,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
             if (duration != -1L) {
                 var videoHolder = instance.command.video
-                videoHolder.sendVideo(chat, link, true, message, userId, null, duration, videoHolder.titleCache.asMap()[videoMatcher.group(1)]!!)
+                videoHolder.sendVideo(chat, link, true, message, userId, null, duration, videoHolder.titleCache.asMap()[videoMatcher.group(1)]!!, false)
             }
 
             return

@@ -70,7 +70,7 @@ class InlineHandler(val instance: YoutubeBot): Listener {
         if (data.startsWith("v.")) {
             var vidHand = instance.command.video
             vidHand.sendVideo(session.chat, "https://www.youtube.com/watch?v=${session.videoMatch}", true, session.originalMessage, session.userId, null, session.duration,
-                    vidHand.titleCache.asMap()[session.videoMatch]!!)
+                    vidHand.titleCache.asMap()[session.videoMatch]!!, false)
         } else {
             instance.command.playlist.sendPlaylist(session.chat, "https://www.youtube.com/playlist?list=${session.playlistMatch}", null, session.userId, session.playlistVideos)
         }
