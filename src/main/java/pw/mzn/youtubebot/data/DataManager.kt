@@ -120,6 +120,8 @@ class DataManager {
                                                      .put("uploader", e.metadata.uploader)
                                                      .put("url", e.metadata.url)))
             } }
+
+            obj.put("cached_videos", converted)
         }
 
         Files.write(Paths.get(dataFile.absolutePath), obj.toString().toByteArray())
