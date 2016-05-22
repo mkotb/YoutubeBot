@@ -389,10 +389,13 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
             }
 
             if (contents.toLowerCase().contains("remix")) {
+                println("continuing, contents=$contents")
                 continue
             }
 
-            title = title.replace(title.substring(bracketIndex, endBracketIndex + 1), "")
+            println("replacing $contents. before: $title")
+            title = title.replace(contents, "")
+            println("after: $title")
         }
 
         return title.trim()
