@@ -390,7 +390,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
             bracketIndex = after.indexOf('[') + endBracketIndex
 
             if (bracketIndex == -1) {
-                bracketIndex = title.indexOf('(', oldIndex)
+                bracketIndex = after.indexOf('(') + endBracketIndex
                 println("using ( ${bracketIndex != -1}")
             } else {
                 println("next $bracketIndex")
