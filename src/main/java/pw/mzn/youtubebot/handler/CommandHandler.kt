@@ -256,7 +256,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
             if (duration != -1L) {
                 var videoHolder = instance.command.video
-                videoHolder.sendVideo(chat, link, true, message, userId, null, duration, videoHolder.titleCache.asMap()[videoMatcher.group(1)]!!, false)
+                videoHolder.sendVideo(chat, link, true, message, userId, null, duration, videoHolder.titleCache.asMap()[videoMatcher.group(1)]!!, false, null)
             }
 
             return

@@ -19,6 +19,7 @@ import java.text.NumberFormat
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.schedule
 
 class VideoCommandHolder(val instance: YoutubeBot) {
     val videoSessions = IdList<VideoSession>()
@@ -31,7 +32,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
             .build<String, String>() // key = video id, val = title
 
     fun sendVideo(chat: Chat, link: String, linkSent: Boolean, originalQuery: Message?, userId: Long,
-                  optionz: VideoOptions?, duration: Long, title: String, ignoreSaved: Boolean) {
+                  optionz: VideoOptions?, duration: Long, title: String, ignoreSaved: Boolean, editMessageId: Long?) {
         var session = VideoSession(instance, chat.id, link, VideoOptions(0, duration), chat, linkSent, userId, originalQuery, duration)
         var regex = instance.videoRegex.matcher(link)
         regex.matches()
@@ -65,14 +66,13 @@ class VideoCommandHolder(val instance: YoutubeBot) {
                             InlineKeyboardButton.builder().text("No").callbackData("lf.n").build())
                     .build()
 
-            chat.sendMessage(SendableTextMessage.builder()
+            session.botMessageId = chat.sendMessage(SendableTextMessage.builder()
                     .replyTo(originalQuery!!)
                     .message("Searching DB for song match...")
                     .replyMarkup(ReplyKeyboardHide.builder().selective(true).build())
-                    .build())
-            chat.sendMessage(SendableTextMessage.builder()
-                    .message("Is this song ${track.name} by ${track.artist}?")
-                    .replyMarkup(replyKeyboard).build())
+                    .build()).messageId
+            instance.bot.editMessageText(chat.id, session.botMessageId, "Is this song ${track.name} by ${track.artist}?",
+                    ParseMode.NONE, false, replyKeyboard)
             trackStore.put(userId, TrackSession(session, track))
 
             return
@@ -80,7 +80,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
 
         if ((chat !is GroupChat) && optionz == null) {
             var id = videoSessions.add(session)
-            initCustomization(id, originalQuery, chat)
+            initCustomization(id, originalQuery, chat, chat.sendMessage("Initializing...").messageId)
             return
         }
 
@@ -110,7 +110,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
                 video.customPerformer = options.customPerformer
             }
 
-            sendProcessedVideo(video, originalQuery, chat, userId, linkSent, options, null)
+            sendProcessedVideo(video, originalQuery, chat, userId, linkSent, options, null) //
         }, "YoutubeBot $videoId Thread").start()
     }
 
@@ -178,24 +178,11 @@ class VideoCommandHolder(val instance: YoutubeBot) {
         return messageBuilder.toString()
     }
 
-    fun initCustomization(id: Int, originalQuery: Message?, chat: Chat) {
-        var reply = SendableTextMessage.builder()
-                .message("Initializing...")
-        var hide = ReplyKeyboardHide.builder()
+    fun initCustomization(id: Int, originalQuery: Message?, chat: Chat, botMessageId: Long) {
+        instance.bot.editMessageText(chat.id, botMessageId,
+                "How would you like to customize your video?", ParseMode.NONE, false, videoKeyboardFor(id))
 
-        if (originalQuery != null) {
-            hide.selective(true)
-            reply.replyTo(originalQuery)
-        }
-
-        reply.replyMarkup(hide.build())
-        chat.sendMessage(reply.build())
-        var response = SendableTextMessage.builder()
-                .message("How would you like to customize your video?")
-                .replyMarkup(videoKeyboardFor(id))
-                .build()
-
-        videoSessions.get(id)!!.botMessageId = chat.sendMessage(response).messageId // next step is processVideoInline()
+        videoSessions.get(id)!!.botMessageId = botMessageId // next step is processVideoInline()
     }
 
     fun processVideoMessage(event: TextMessageReceivedEvent?,
@@ -227,7 +214,8 @@ class VideoCommandHolder(val instance: YoutubeBot) {
                 session.options.startTime = timestamp
             } else if (selecting.startsWith("e")) {
                 if (timestamp == 0L) {
-                    event.chat.sendMessage("Please enter a valid time!")
+                    editDelayed("Please enter a valid time", entry.key, session.chatId,
+                            session.botMessageId, 2)
                     return
                 }
 
@@ -247,7 +235,8 @@ class VideoCommandHolder(val instance: YoutubeBot) {
             try {
                 speed = message.toDouble()
             } catch (e: Exception) {
-                event.chat.sendMessage("Please enter a valid number!")
+                editDelayed("Please enter a valid number!", entry.key, session.chatId,
+                        session.botMessageId, 2)
                 return
             }
 
@@ -264,30 +253,39 @@ class VideoCommandHolder(val instance: YoutubeBot) {
             var title = message.trim()
 
             if ("".equals(title)) {
-                event.chat.sendMessage("Please enter a valid title!")
+                editDelayed("Please enter a valid title!", entry.key, session.chatId,
+                        session.botMessageId, 2)
                 return
             }
 
             session.options.customTitle = title
-            event.chat.sendMessage(SendableTextMessage.builder()
-                    .replyTo(event.message)
-                    .message("Updated!").build())
+            editDelayed("Changes applied!", entry.key, session.chatId,
+                    session.botMessageId, 1)
         } else if ("pr".equals(selecting)) {
             var performer = message.trim()
 
             if ("".equals(performer)) {
-                event.chat.sendMessage("Please enter a valid title!")
+                editDelayed("Please enter a valid performer!", entry.key, session.chatId,
+                        session.botMessageId, 2)
                 return
             }
 
             session.options.customPerformer = performer
-            event.chat.sendMessage(SendableTextMessage.builder()
-                    .replyTo(event.message)
-                    .message("Updated!").build())
+            editDelayed("Changes applied!", entry.key, session.chatId,
+                    session.botMessageId, 1)
         }
 
         session.selecting = "N/A" // reset back to processVideoInline()
         instance.bot.editMessageReplyMarkup(session.chatId, session.botMessageId, videoKeyboardFor(entry.key))
+    }
+
+    private fun editDelayed(firstMessage: String, sessionId: Int, chatId: String, editId: Long, time: Int) {
+        instance.bot.editMessageText(chatId, editId, firstMessage, ParseMode.MARKDOWN, false, null)
+
+        Timer().schedule(time.toLong() * 1000) {
+            instance.bot.editMessageText(chatId, editId, "How would you like to customize your video?",
+                    ParseMode.MARKDOWN, true, videoKeyboardFor(sessionId))
+        }
     }
 
     fun processSearchSelection(event: TextMessageReceivedEvent) {
@@ -320,7 +318,8 @@ class VideoCommandHolder(val instance: YoutubeBot) {
             return
         }
 
-        sendVideo(event.chat, link, false, event.message, userId, null, duration, titleCache.asMap()[selected.videoId]!!, false)
+        sendVideo(event.chat, link, false, event.message, userId, null, duration,
+                titleCache.asMap()[selected.videoId]!!, false, null)
     }
 
     fun processSearch(chat: Chat, query: String, userId: Long, originalMessage: Message) {
@@ -370,7 +369,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
 
         if ("Customize".equals(content)) {
             sendVideo(session.chat, session.link, session.linkSent, session.originalQuery, session.userId,
-                    null, session.duration, titleCache.asMap()[session.videoId]!!, true)
+                    null, session.duration, titleCache.asMap()[session.videoId]!!, true, session.botMessageId)
             matchingStore.remove(userId)
             return
         }
@@ -432,7 +431,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
             callback.answer("Sending to processing queue...", false)
             session.options.thumbnailUrl = session.thumbnail
             sendVideo(session.chat, session.link, session.linkSent, session.originalQuery, session.userId,
-                    session.options, session.duration, titleCache.asMap()[session.videoId]!!, true)
+                    session.options, session.duration, titleCache.asMap()[session.videoId]!!, true, session.botMessageId)
             return
         }
 
@@ -448,7 +447,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
 
                 if ("c".equals(selectedThumbnail)) {
                     session.pendingImage = true
-                    session.chat.sendMessage("Please send your thumbnail")
+                    callback.answer("Please send your thumbnail!", true)
                 }
 
                 if ("d".equals(selectedThumbnail)) {

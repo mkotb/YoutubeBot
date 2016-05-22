@@ -2,6 +2,7 @@ package pw.mzn.youtubebot.handler
 
 import pro.zackpollard.telegrambot.api.chat.CallbackQuery
 import pro.zackpollard.telegrambot.api.chat.message.send.InputFile
+import pro.zackpollard.telegrambot.api.chat.message.send.ParseMode
 import pro.zackpollard.telegrambot.api.chat.message.send.SendablePhotoMessage
 import pro.zackpollard.telegrambot.api.event.Listener
 import pro.zackpollard.telegrambot.api.event.chat.CallbackQueryReceivedEvent
@@ -77,7 +78,7 @@ class InlineHandler(val instance: YoutubeBot): Listener {
         if (data.startsWith("v.")) {
             var vidHand = instance.command.video
             vidHand.sendVideo(session.chat, "https://www.youtube.com/watch?v=${session.videoMatch}", true, session.originalMessage, session.userId, null, session.duration,
-                    vidHand.titleCache.asMap()[session.videoMatch]!!, false)
+                    vidHand.titleCache.asMap()[session.videoMatch]!!, false, null)
         } else {
             instance.command.playlist.sendPlaylist(session.chat, "https://www.youtube.com/playlist?list=${session.playlistMatch}", null, session.userId, session.playlistVideos)
         }
@@ -107,18 +108,19 @@ class InlineHandler(val instance: YoutubeBot): Listener {
                 options.thumbnail = true
                 trackSession.videoSession.thumbnail = imageUrl
                 message += ", and thumbnail for you! Here is a preview of the thumbnail:"
-                trackSession.videoSession.chat.sendMessage(message)
                 trackSession.videoSession.chat.sendMessage(SendablePhotoMessage.builder()
                         .photo(InputFile(URL(imageUrl)))
                         .build())
                 println(imageUrl)
             } else {
                 message += " for you!"
-                trackSession.videoSession.chat.sendMessage(message)
             }
+
+            instance.bot.editMessageText(trackSession.videoSession.chatId, trackSession.videoSession.botMessageId,
+                    message, ParseMode.NONE, false, null)
         }
 
         var id = video.videoSessions.add(trackSession.videoSession)
-        video.initCustomization(id, trackSession.videoSession.originalQuery, trackSession.videoSession.chat)
+        video.initCustomization(id, trackSession.videoSession.originalQuery, trackSession.videoSession.chat, trackSession.videoSession.botMessageId)
     }
 }
