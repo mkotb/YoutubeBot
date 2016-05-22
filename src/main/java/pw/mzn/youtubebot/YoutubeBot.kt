@@ -386,7 +386,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
 
             var contents = title.substring(bracketIndex, endBracketIndex + 1)
             var oldIndex = bracketIndex
-            bracketIndex = title.indexOf('[', oldIndex)
+            bracketIndex = title.indexOf('[', oldIndex + 1)
 
             if (bracketIndex == -1) {
                 bracketIndex = title.indexOf('(', oldIndex)
