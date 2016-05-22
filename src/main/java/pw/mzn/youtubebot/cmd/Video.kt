@@ -69,7 +69,6 @@ class VideoCommandHolder(val instance: YoutubeBot) {
             session.botMessageId = chat.sendMessage(SendableTextMessage.builder()
                     .replyTo(originalQuery!!)
                     .message("Searching DB for song match...")
-                    .replyMarkup(ReplyKeyboardHide.builder().selective(true).build())
                     .build()).messageId
             instance.bot.editMessageText(chat.id, session.botMessageId, "Is this song ${track.name} by ${track.artist}?",
                     ParseMode.NONE, false, replyKeyboard)
