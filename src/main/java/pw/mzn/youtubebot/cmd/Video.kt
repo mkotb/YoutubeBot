@@ -79,7 +79,13 @@ class VideoCommandHolder(val instance: YoutubeBot) {
 
         if ((chat !is GroupChat) && optionz == null) {
             var id = videoSessions.add(session)
-            initCustomization(id, originalQuery, chat, chat.sendMessage("Initializing...").messageId)
+            var messageId = editMessageId
+
+            if (messageId == null) {
+                messageId = chat.sendMessage("Initializing...").messageId
+            }
+
+            initCustomization(id, originalQuery, chat, messageId)
             return
         }
 
