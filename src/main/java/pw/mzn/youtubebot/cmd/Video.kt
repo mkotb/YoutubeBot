@@ -66,10 +66,17 @@ class VideoCommandHolder(val instance: YoutubeBot) {
                             InlineKeyboardButton.builder().text("No").callbackData("lf.n").build())
                     .build()
 
-            session.botMessageId = chat.sendMessage(SendableTextMessage.builder()
-                    .replyTo(originalQuery!!)
-                    .message("Searching DB for song match...")
-                    .build()).messageId
+            if (editMessageId != null) {
+                instance.bot.editMessageText(chat.id, editMessageId, "Searching DB for song match...",
+                        ParseMode.NONE, false, null)
+                session.botMessageId = editMessageId
+            } else {
+                session.botMessageId = chat.sendMessage(SendableTextMessage.builder()
+                        .replyTo(originalQuery!!)
+                        .message("Searching DB for song match...")
+                        .build()).messageId
+            }
+
             instance.bot.editMessageText(chat.id, session.botMessageId, "Is this song ${track.name} by ${track.artist}?",
                     ParseMode.NONE, false, replyKeyboard)
             trackStore.put(userId, TrackSession(session, track))
