@@ -367,34 +367,44 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
 
         if (bracketIndex == -1) {
             bracketIndex = title.indexOf('(')
+            println("using ( ${bracketIndex != -1}")
         }
 
         while (bracketIndex != -1) {
+            println("got $bracketIndex")
             var endBracketIndex = title.indexOf(']', bracketIndex)
 
             if (endBracketIndex == -1) {
                 endBracketIndex = title.indexOf(')', bracketIndex)
+                println("using ) ${endBracketIndex != -1}")
             }
 
             if (endBracketIndex == -1) {
+                println("exited loop")
                 break; // rip
             }
 
-            var contents = title.substring(bracketIndex, endBracketIndex)
+            var contents = title.substring(bracketIndex, endBracketIndex + 1)
             var oldIndex = bracketIndex
             bracketIndex = title.indexOf('[', oldIndex)
 
             if (bracketIndex == -1) {
                 bracketIndex = title.indexOf('(', oldIndex)
+                println("using ( ${bracketIndex != -1}")
+            } else {
+                println("next $bracketIndex")
             }
 
             if (contents.toLowerCase().contains("remix")) {
+                println("ignoring $bracketIndex,$oldIndex")
                 continue
             }
 
             title = title.replace(title.substring(bracketIndex, endBracketIndex + 1), "")
+            println("replaced $bracketIndex,$oldIndex")
         }
 
+        println("done")
         return title.trim()
     }
 
