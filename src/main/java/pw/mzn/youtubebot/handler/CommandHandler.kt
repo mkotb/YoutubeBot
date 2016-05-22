@@ -48,7 +48,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                                 .title(title)
                                 .url(URL("https://www.youtube.com/watch?v=$id"))
                                 .inputMessageContent(InputTextMessageContent.builder()
-                                        .messageText("[Click here to download $title](https://telegram.me/YoutubeMusic_Bot?start=$id)")
+                                        .messageText("[Click here to download $title](https://telegram.me/${instance.bot.botUsername}?start=$id)")
                                         .parseMode(ParseMode.MARKDOWN)
                                         .build()).build()).build())
                 return@run
@@ -64,7 +64,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                         .title(e.title)
                         .url(URL("https://www.youtube.com/watch?v=${e.videoId}"))
                         .inputMessageContent(InputTextMessageContent.builder()
-                                .messageText("[Click here to download ${e.title}](https://telegram.me/YoutubeMusic_Bot?start=${e.videoId})")
+                                .messageText("[Click here to download ${e.title}](https://telegram.me/${instance.bot.botUsername}?start=${e.videoId})")
                                 .parseMode(ParseMode.MARKDOWN)
                                 .build())
 

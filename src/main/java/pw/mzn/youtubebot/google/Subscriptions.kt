@@ -9,6 +9,8 @@ import com.google.api.services.youtube.model.PlaylistItemListResponse
 import com.google.common.collect.Lists
 import pro.zackpollard.telegrambot.api.chat.message.send.ParseMode
 import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage
+import pro.zackpollard.telegrambot.api.keyboards.InlineKeyboardButton
+import pro.zackpollard.telegrambot.api.keyboards.InlineKeyboardMarkup
 import pw.mzn.youtubebot.YoutubeBot
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -90,11 +92,18 @@ class SubscriptionCallback(val instance: YoutubeBot): JsonBatchCallback<Playlist
                 .forEach { vid ->
                     run() {
                         var channel = instance.dataManager.channelBy(vid.channelId)
+                        var markup = InlineKeyboardMarkup.builder()
+                                .addRow(InlineKeyboardButton.builder()
+                                        .text("⬇️ Download")
+                                        .url("https://telegram.me/${instance.bot.botUsername}?start=${vid.videoId}")
+                                        .build())
+                                .build()
 
                         channel?.subscribed?.forEach { e ->
                             instance.bot.getChat(e).sendMessage(SendableTextMessage.builder()
                                     .message("*${channel.channelName} has uploaded a new video!*\n_${vid.title}_\n" +
                                             "[Watch here](https://www.youtube.com/watch?v=${vid.videoId})")
+                                    .replyMarkup(markup)
                                     .parseMode(ParseMode.MARKDOWN)
                                     .build())
                         }
