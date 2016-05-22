@@ -148,6 +148,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
                 return
             }
 
+            video.customLength = options.endTime - options.startTime
             video.fileId = (audioMessage.content as AudioContent).content.fileId
             instance.dataManager.videos.add(video)
             instance.dataManager.saveToFile()

@@ -377,7 +377,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
             }
 
             if (endBracketIndex == -1) {
-                break; // rip
+                break // rip
             }
 
             var contents = title.substring(bracketIndex, endBracketIndex + 1)
