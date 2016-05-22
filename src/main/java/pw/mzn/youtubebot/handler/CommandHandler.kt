@@ -167,12 +167,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             return
         }
 
-        if (video.videoSearch.containsKey(event!!.message.sender.id)) {
-            video.processSearchSelection(event)
-            return
-        }
-
-        if (subscription.channelSearch.containsKey(event.chat.id.toLong())) {
+        if (subscription.channelSearch.containsKey(event!!.chat.id.toLong())) {
             subscription.processChannelSelection(event)
             return
         }

@@ -24,7 +24,7 @@ import kotlin.concurrent.schedule
 class VideoCommandHolder(val instance: YoutubeBot) {
     val videoSessions = IdList<VideoSession>()
     val matchingStore = ConcurrentHashMap<Long, MatchSession>()
-    val videoSearch = ConcurrentHashMap<Long, List<CachedYoutubeVideo>>()
+    val videoSearch = ConcurrentHashMap<Long, SearchSession>()
     val trackStore = ConcurrentHashMap<Long, TrackSession>()
     val titleCache = CacheBuilder.newBuilder()
             .concurrencyLevel(5)
@@ -109,7 +109,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
                 video.customPerformer = options.customPerformer
             }
 
-            sendProcessedVideo(video, originalQuery, chat, userId, linkSent, options, null) //
+            sendProcessedVideo(video, originalQuery, chat, userId, linkSent, options, editMessageId)
         }, "YoutubeBot $videoId Thread").start()
     }
 
@@ -287,42 +287,36 @@ class VideoCommandHolder(val instance: YoutubeBot) {
         }
     }
 
-    fun processSearchSelection(event: TextMessageReceivedEvent) {
-        var userId = event.message.sender.id
-        var videos = videoSearch[userId]
-        var selected = videos!!.filter { e -> e.title.equals(event.content.content) }.firstOrNull()
+    fun processSearchInline(id: Int, userId: Long, callback: CallbackQuery) {
+        var session = videoSearch[userId]
+
+        if (id == 9) {
+            session!!.chat.sendMessage("Cancelled!")
+            instance.commandHandler.flushSessions(userId, session.chat.id)
+            return
+        }
+
+        var selected = session!!.idList.get(id)
 
         videoSearch.remove(userId)
 
         if (selected == null) {
-            event.chat.sendMessage(SendableTextMessage.builder()
-                    .message("That selection was not an option!")
-                    .replyMarkup(ReplyKeyboardHide.builder().selective(true).build())
-                    .replyTo(event.message).build())
-            return
-        }
-
-        if ("Cancel".equals(event.content.content)) {
-            instance.commandHandler.flushSessions(userId, event.chat.id)
-            event.chat.sendMessage(SendableTextMessage.builder()
-                    .message("Cancelled!")
-                    .replyMarkup(ReplyKeyboardHide.builder().selective(true).build()).build())
+            callback.answer("That selection was not an option!", true)
             return
         }
 
         var link = "https://www.youtube.com/watch?v=${selected.videoId}"
-        var duration = instance.preconditionVideo(link, event.chat, false)
+        var duration = instance.preconditionVideo(link, session.chat, false)
 
         if (duration == -1L) {
             return
         }
 
-        sendVideo(event.chat, link, false, event.message, userId, null, duration,
+        sendVideo(session.chat, link, false, session.originalQuery, userId, null, duration,
                 titleCache.asMap()[selected.videoId]!!, false, null)
     }
 
     fun processSearch(chat: Chat, query: String, userId: Long, originalMessage: Message) {
-        chat.sendMessage("Searching for video...")
         var response = instance.searchVideo(query)
 
         if (response.isEmpty()) {
@@ -330,34 +324,33 @@ class VideoCommandHolder(val instance: YoutubeBot) {
             return
         }
 
-        var keyboard = ReplyKeyboardMarkup.builder()
+        var keyboard = InlineKeyboardMarkup.builder()
         var max = response.size - 1
 
-        if (max > 5) {
-            max = 5
+        if (max > 3) {
+            max = 3
         }
 
-        var cachedVids = ArrayList<CachedYoutubeVideo>()
+        var cachedVids = IdList<CachedYoutubeVideo>()
 
         for (i in 0..max) {
             var entry = response[i]
             var title = entry.title
 
-            cachedVids.add(entry)
-            keyboard.addRow(KeyboardButton.builder().text(title).build())
+            keyboard.addRow(InlineKeyboardButton.builder()
+                    .text(title)
+                    .callbackData("s.${cachedVids.add(entry)}").build())
         }
 
-        keyboard.addRow(KeyboardButton.builder().text("Cancel").build())
-        keyboard.selective(true)
-
-        videoSearch.put(userId, cachedVids)
+        keyboard.addRow(InlineKeyboardButton.builder().text("Cancel").callbackData("s.9").build())
         var message = SendableTextMessage.builder()
                 .message("Select a Video")
                 .replyMarkup(keyboard.build())
                 .replyTo(originalMessage)
                 .build()
 
-        chat.sendMessage(message)
+        videoSearch.put(userId, SearchSession(cachedVids, chat.sendMessage(message).messageId, chat,
+                originalMessage))
     }
 
     fun processMatchInline(matchSession: MatchSession, userId: Long, selection: String, query: CallbackQuery) {

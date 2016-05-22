@@ -16,6 +16,7 @@ class InlineHandler(val instance: YoutubeBot): Listener {
     override fun onCallbackQueryReceivedEvent(event: CallbackQueryReceivedEvent?) {
         var callback = event!!.callbackQuery
         var data = callback.data
+        var from = callback.from.id
 
         if (data.split(".").size < 2) {
             return
@@ -36,15 +37,21 @@ class InlineHandler(val instance: YoutubeBot): Listener {
             return
         }
 
-        if (data.startsWith("lf.") && instance.command.video.trackStore.containsKey(callback.from.id)) {
+        if (data.startsWith("lf.") && instance.command.video.trackStore.containsKey(from)) {
             processTrackInline(callback, data)
+            return
         }
 
-        if (data.startsWith("m.") && instance.command.video.matchingStore.containsKey(callback.from.id)) {
-            var session = instance.command.video.matchingStore[callback.from.id]!!
+        if (data.startsWith("m.") && instance.command.video.matchingStore.containsKey(from)) {
+            var session = instance.command.video.matchingStore[from]!!
 
-            instance.command.video.processMatchInline(session, callback.from.id,
+            instance.command.video.processMatchInline(session, from,
                     session.selections.get(data.split(".")[1].toInt())!!, callback)
+            return
+        }
+
+        if (data.startsWith("s.") && instance.command.video.videoSearch.containsKey(from)) {
+            instance.command.video.processSearchInline(data.split(".")[1].toInt(), from, callback)
         }
     }
 
