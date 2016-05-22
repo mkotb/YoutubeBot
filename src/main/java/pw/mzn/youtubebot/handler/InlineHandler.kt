@@ -38,6 +38,13 @@ class InlineHandler(val instance: YoutubeBot): Listener {
         if (data.startsWith("lf.") && instance.command.video.trackStore.containsKey(callback.from.id)) {
             processTrackInline(callback, data)
         }
+
+        if (data.startsWith("m.") && instance.command.video.matchingStore.containsKey(callback.from.id)) {
+            var session = instance.command.video.matchingStore[callback.from.id]!!
+
+            instance.command.video.processMatchInline(session, callback.from.id,
+                    session.selections.get(data.split(".")[1].toInt())!!, callback)
+        }
     }
 
     fun <T> fetchSession(data: String, index: Int, minSize: Int, list: IdList<T>): T? {

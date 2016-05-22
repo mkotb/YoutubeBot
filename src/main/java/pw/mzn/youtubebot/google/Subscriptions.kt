@@ -43,7 +43,7 @@ class SubscriptionsTask(val instance: YoutubeBot, val timer: Timer): TimerTask()
         }
 
         println("checked for new videos")
-        timer.schedule(SubscriptionsTask(instance, timer), TimeUnit.MINUTES.toMillis(30L)) // faire, aller, voir, avoir, etre
+        timer.schedule(SubscriptionsTask(instance, timer), TimeUnit.MINUTES.toMillis(30L))
     }
 }
 

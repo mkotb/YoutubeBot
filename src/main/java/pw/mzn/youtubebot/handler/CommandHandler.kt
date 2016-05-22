@@ -6,6 +6,7 @@ import pro.zackpollard.telegrambot.api.chat.inline.send.InlineQueryResponse
 import pro.zackpollard.telegrambot.api.chat.inline.send.content.InputTextMessageContent
 import pro.zackpollard.telegrambot.api.chat.inline.send.results.InlineQueryResult
 import pro.zackpollard.telegrambot.api.chat.inline.send.results.InlineQueryResultArticle
+import pro.zackpollard.telegrambot.api.chat.inline.send.results.InlineQueryResultCachedAudio
 import pro.zackpollard.telegrambot.api.chat.message.Message
 import pro.zackpollard.telegrambot.api.chat.message.send.*
 import pro.zackpollard.telegrambot.api.event.Listener
@@ -59,24 +60,33 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             var idCounter = 1
 
             response.forEach { e -> run {
-                var article = InlineQueryResultArticle.builder()
-                        .id(idCounter++.toString()) // useless
-                        .title(e.title)
-                        .url(URL("https://www.youtube.com/watch?v=${e.videoId}"))
-                        .inputMessageContent(InputTextMessageContent.builder()
-                                .messageText("[Click here to download ${e.title}](https://telegram.me/${instance.bot.botUsername}?start=${e.videoId})")
-                                .parseMode(ParseMode.MARKDOWN)
-                                .build())
+                var cached = instance.dataManager.videosBy(e.videoId)
 
-                if (!"null".equals(e.thumb)) {
-                    article.thumbUrl(URL(e.thumb))
+                if (cached.isNotEmpty()) {
+                    videos.add(InlineQueryResultCachedAudio.builder()
+                            .id(idCounter++.toString())
+                            .audioFileId(cached[0].fileId)
+                            .build())
+                } else {
+                    var article = InlineQueryResultArticle.builder()
+                            .id(idCounter++.toString()) // useless
+                            .title(e.title)
+                            .url(URL("https://www.youtube.com/watch?v=${e.videoId}"))
+                            .inputMessageContent(InputTextMessageContent.builder()
+                                    .messageText("[Click here to download ${e.title}](https://telegram.me/${instance.bot.botUsername}?start=${e.videoId})")
+                                    .parseMode(ParseMode.MARKDOWN)
+                                    .build())
+
+                    if (!"null".equals(e.thumb)) {
+                        article.thumbUrl(URL(e.thumb))
+                    }
+
+                    if (!"null".equals(e.description)) {
+                        article.description(e.description)
+                    }
+
+                    videos.add(article.build())
                 }
-
-                if (!"null".equals(e.description)) {
-                    article.description(e.description)
-                }
-
-                videos.add(article.build())
             } }
 
             query.answer(instance.bot, InlineQueryResponse.builder().results(videos).build())
@@ -162,11 +172,6 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             return
         }
 
-        if (video.matchingStore.containsKey(event.message.sender.id)) {
-            video.processMatchSelection(event)
-            return
-        }
-
         if (subscription.channelSearch.containsKey(event.chat.id.toLong())) {
             subscription.processChannelSelection(event)
             return
@@ -178,13 +183,14 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         }
 
         var query = event.content.content
+        var tag = instance.bot.botUsername
 
-        if (query.contains("@YoutubeMusic_Bot") && !query.startsWith("@YoutubeMusic_Bot")) {
+        if (query.contains("@$tag") && !query.startsWith("@$tag")) {
             return // probably just a mention, not a search
         }
 
-        if (query.startsWith("@YoutubeMusic_Bot")) { // group chats
-            query = query.replace("@YoutubeMusic_Bot ", "")
+        if (query.startsWith("@$tag")) { // group chats
+            query = query.replace("@$tag ", "")
         }
 
         processInput(query,event.chat, event.message)
