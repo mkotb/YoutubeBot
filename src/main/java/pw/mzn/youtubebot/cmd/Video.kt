@@ -377,7 +377,10 @@ class VideoCommandHolder(val instance: YoutubeBot) {
             return
         }
 
-        event.chat.sendMessage("Using preset...")
+        event.chat.sendMessage(SendableTextMessage.builder()
+                .message("Using preset...")
+                .replyTo(session.originalQuery!!)
+                .replyMarkup(ReplyKeyboardHide.builder().selective(true).build()).build())
         sendProcessedVideo(matched, session.originalQuery, session.chat, session.userId, session.linkSent,
                 session.options)
     }

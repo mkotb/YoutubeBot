@@ -35,6 +35,25 @@ class CommandHandler(val instance: YoutubeBot): Listener {
     override fun onInlineQueryReceived(event: InlineQueryReceivedEvent?) {
         Thread() { run {
             var query = event!!.query
+            var linkMatcher = instance.videoRegex.matcher(query.query)
+
+            if (linkMatcher.lookingAt()) {
+                var id = linkMatcher.group(1)
+                instance.preconditionVideo(query.query, null, false)
+                var title = instance.command.video.titleCache.asMap()[id]
+
+                query.answer(instance.bot, InlineQueryResponse.builder()
+                        .results(InlineQueryResultArticle.builder()
+                                .id("1") // useless
+                                .title(title)
+                                .url(URL("https://www.youtube.com/watch?v=$id"))
+                                .inputMessageContent(InputTextMessageContent.builder()
+                                        .messageText("[Click here to download $title](https://telegram.me/YoutubeMusic_Bot?start=$id)")
+                                        .parseMode(ParseMode.MARKDOWN)
+                                        .build()).build()).build())
+                return@run
+            }
+
             var response = instance.searchVideo(query.query)
             var videos = ArrayList<InlineQueryResult>(response.size)
             var idCounter = 1

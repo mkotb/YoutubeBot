@@ -257,7 +257,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
         return response.items[0].contentDetails.itemCount
     }
 
-    fun preconditionVideo(link: String, chat: Chat, silent: Boolean): Long {
+    fun preconditionVideo(link: String, chat: Chat?, silent: Boolean): Long {
         var search = youtube.videos().list("contentDetails,snippet")
         var regex = videoRegex.matcher(link)
         regex.lookingAt()
@@ -269,7 +269,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
 
         if (response.items.isEmpty()) {
             if (!silent) {
-                chat.sendMessage("Unable to find any Youtube video by that ID!")
+                chat!!.sendMessage("Unable to find any Youtube video by that ID!")
             }
             return -1L
         }
@@ -280,7 +280,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
 
         if (duration > 3600L) {
             if (!silent) {
-                chat.sendMessage("This bot is unable to process videos longer than 1 hour! Sorry!")
+                chat!!.sendMessage("This bot is unable to process videos longer than 1 hour! Sorry!")
             }
             return -1L
         }
