@@ -87,18 +87,8 @@ class VideoCommandHolder(val instance: YoutubeBot) {
             var options = optionz ?: VideoOptions()
 
             instance.commandHandler.timeoutCache.put(userId, Object())
-            var reply = SendableTextMessage.builder()
-                    .message("Downloading video and extracting audio (Depending on duration of video, " +
-                            "this may take a while)")
-            var hide = ReplyKeyboardHide.builder()
-
-            if (originalQuery != null) {
-                hide.selective(true)
-                reply.replyTo(originalQuery)
-            }
-
-            reply.replyMarkup(hide.build())
-            chat.sendMessage(reply.build())
+            instance.bot.editMessageText(chat.id, editMessageId, "Downloading video and extracting audio " +
+                    "(Depending on duration of video, this may take a while)", ParseMode.NONE, true, null)
             var video = instance.downloadVideo(options, videoId)
 
             if (!"N/A".equals(options.customTitle)) {
@@ -313,7 +303,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
         }
 
         sendVideo(session.chat, link, false, session.originalQuery, userId, null, duration,
-                titleCache.asMap()[selected.videoId]!!, false, null)
+                titleCache.asMap()[selected.videoId]!!, false, session.botMessageId)
     }
 
     fun processSearch(chat: Chat, query: String, userId: Long, originalMessage: Message) {
