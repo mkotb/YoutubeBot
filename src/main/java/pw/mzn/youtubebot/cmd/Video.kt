@@ -59,7 +59,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
 
         var search = instance.searchTrack(title).toMutableList()
 
-        if (((chat is GroupChat) || optionz == null) && !search.isEmpty()) {
+        if (optionz == null && !search.isEmpty()) {
             var track = search[0]
             var replyKeyboard = InlineKeyboardMarkup.builder()
                     .addRow(InlineKeyboardButton.builder().text("Yes").callbackData("lf.y").build(),

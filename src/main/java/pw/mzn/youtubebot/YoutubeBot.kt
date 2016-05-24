@@ -87,7 +87,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
         println("Finished downloading youtube-dl executable")
     }
 
-    fun searchChannel(query: String): List<CachedYoutubeChannel> { // TODO take advantage of e.snippet.customUrl
+    fun searchChannel(query: String): List<CachedYoutubeChannel> {
         var search = youtube.search().list("id,snippet")
 
         search.q = query
@@ -363,6 +363,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
 
     fun cleanTitle(titl: String): String {
         var title = titl // change to var
+        var progressingTitle = title
         var bracketIndex = title.indexOf('[')
 
         if (bracketIndex == -1) {
@@ -370,10 +371,10 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
         }
 
         while (bracketIndex != -1) {
-            var endBracketIndex = title.indexOf(']', bracketIndex)
+            var endBracketIndex = progressingTitle.indexOf(']', bracketIndex)
 
             if (endBracketIndex == -1) {
-                endBracketIndex = title.indexOf(')', bracketIndex)
+                endBracketIndex = progressingTitle.indexOf(')', bracketIndex)
             }
 
             if (endBracketIndex == -1) {
@@ -381,11 +382,11 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
             }
 
             var contents = title.substring(bracketIndex, endBracketIndex + 1)
-            var after = title.substring(endBracketIndex, title.length)
-            bracketIndex = after.indexOf('[') + endBracketIndex
+            progressingTitle = title.substring(endBracketIndex, title.length)
+            bracketIndex = progressingTitle.indexOf('[') + endBracketIndex
 
             if (bracketIndex == -1) {
-                bracketIndex = after.indexOf('(') + endBracketIndex
+                bracketIndex = progressingTitle.indexOf('(') + endBracketIndex
             }
 
             if (contents.toLowerCase().contains("remix")) {
