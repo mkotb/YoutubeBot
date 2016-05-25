@@ -3,7 +3,6 @@ package pw.mzn.youtubebot.cmd
 import com.google.common.cache.CacheBuilder
 import pro.zackpollard.telegrambot.api.chat.CallbackQuery
 import pro.zackpollard.telegrambot.api.chat.Chat
-import pro.zackpollard.telegrambot.api.chat.GroupChat
 import pro.zackpollard.telegrambot.api.chat.message.Message
 import pro.zackpollard.telegrambot.api.chat.message.content.AudioContent
 import pro.zackpollard.telegrambot.api.chat.message.content.TextContent
@@ -84,7 +83,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
             return
         }
 
-        if ((chat !is GroupChat) && optionz == null) {
+        if (optionz == null) {
             var id = videoSessions.add(session)
             var messageId = editMessageId
 

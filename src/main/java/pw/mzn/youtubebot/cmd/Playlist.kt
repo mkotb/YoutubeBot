@@ -2,8 +2,6 @@ package pw.mzn.youtubebot.cmd
 
 import pro.zackpollard.telegrambot.api.chat.CallbackQuery
 import pro.zackpollard.telegrambot.api.chat.Chat
-import pro.zackpollard.telegrambot.api.chat.GroupChat
-import pro.zackpollard.telegrambot.api.chat.SuperGroupChat
 import pro.zackpollard.telegrambot.api.chat.message.content.TextContent
 import pro.zackpollard.telegrambot.api.chat.message.send.ParseMode
 import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage
@@ -66,7 +64,7 @@ class PlaylistCommandHolder(val instance: YoutubeBot) {
     }
 
     fun sendPlaylist(chat: Chat, link: String, options: PlaylistOptions?, userId: Long, itemCount: Long) {
-        if ((chat !is GroupChat && chat !is SuperGroupChat) && options == null) {
+        if (options == null) {
             var id = playlistSessions.add(PlaylistSession(chat.id, PlaylistOptions(), chat, link, "N/A", userId, itemCount))
             var message = "How would you like to select the videos from this playlist?"
             var selectionKeyboard = InlineKeyboardMarkup.builder()
@@ -89,10 +87,6 @@ class PlaylistCommandHolder(val instance: YoutubeBot) {
         }
 
         var option = options
-
-        if (option == null) {
-            option = PlaylistOptions(true)
-        }
 
         instance.commandHandler.timeoutCache.put(userId, Object())
         chat.sendMessage(SendableTextMessage.builder()
