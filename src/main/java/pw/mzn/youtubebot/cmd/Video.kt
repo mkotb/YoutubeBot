@@ -335,13 +335,6 @@ class VideoCommandHolder(val instance: YoutubeBot) {
     }
 
     fun processSearch(chat: Chat, query: String, userId: Long, originalMessage: Message) {
-        var query = query
-
-        if (query.startsWith("inline:")) {
-            query = query.split(":")[1]
-            pendingInline.put(userId, Any())
-        }
-
         var response = instance.searchVideo(query)
 
         if (response.isEmpty()) {

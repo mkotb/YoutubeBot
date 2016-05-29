@@ -129,6 +129,18 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
          if ("start".equals(event.command)) {
              if (event.args.size > 0) {
+                 if (event.args[0].startsWith("inline:")) {
+                     instance.command.video.pendingInline.put(event.message.sender.id, Any())
+                     instance.command.video.processSearch(event.chat, event.args[0].replaceFirst("inline:", ""), event.message.sender.id,
+                             event.message)
+                     return
+                 }
+
+                 if (event.args[0].startsWith("inline-l:https://www.youtube.com/watch?v=")) {
+                     processInput(event.args[0].replaceFirst("inline-l:", ""), event.chat, event.message)
+                     return
+                 }
+
                  if (event.args[0].startsWith("login")) {
                      instance.youtubeUserAuth.processAuth(event.args[0].replace("login-", ""), event)
                      return
@@ -211,11 +223,6 @@ class CommandHandler(val instance: YoutubeBot): Listener {
     fun processInput(input: String, chat: Chat, message: Message) {
         var userId = message.sender.id
         var link = input.split(" ")[0]
-
-        if (link.startsWith("inline-l:https://www.youtube.com/watch?v=")) {
-            link = link.split(":")[1]
-        }
-
         var videoMatcher = instance.videoRegex.matcher(link)
         var playlistMatcher = instance.playlistRegex.matcher(link)
         var matchesVideo = videoMatcher.find()
