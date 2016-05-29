@@ -29,6 +29,10 @@ class VideoCommandHolder(val instance: YoutubeBot) {
             .concurrencyLevel(5)
             .expireAfterWrite(8, TimeUnit.HOURS)
             .build<String, String>() // key = video id, val = title
+    val pendingInline = CacheBuilder.newBuilder()
+            .concurrencyLevel(5)
+            .expireAfterWrite(2, TimeUnit.HOURS)
+            .build<Long, Any>()
 
     fun sendVideo(chat: Chat, link: String, linkSent: Boolean, originalQuery: Message?, userId: Long,
                   optionz: VideoOptions?, duration: Long, title: String, ignoreSaved: Boolean, editMessageId: Long?) {
@@ -96,7 +100,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
         }
 
         Thread(Runnable() {
-            var options = optionz ?: VideoOptions()
+            var options = optionz
 
             instance.commandHandler.timeoutCache.put(userId, Object())
             instance.bot.editMessageText(chat.id, editMessageId, "Downloading video and extracting audio " +
@@ -124,15 +128,26 @@ class VideoCommandHolder(val instance: YoutubeBot) {
         }
 
         var audioMessage = chat.sendMessage(audio.build())
+        var fileId = (audioMessage.content as AudioContent).content.fileId
+        var inlineKeyboard: InlineKeyboard? = null
+
+        if (pendingInline.asMap().containsKey(userId)) {
+            inlineKeyboard = InlineKeyboardMarkup.builder().addRow(InlineKeyboardButton.builder()
+                    .text("Send in Original Chat").switchInlineQuery("afid:$fileId").build()).build()
+        }
 
         if (editMessageId != null) {
-            instance.bot.editMessageText(chat.id, editMessageId, descriptionFor(video, linkSent), ParseMode.MARKDOWN, true, null)
+            instance.bot.editMessageText(chat.id, editMessageId, descriptionFor(video, linkSent), ParseMode.MARKDOWN, true, inlineKeyboard)
         } else {
             var md = SendableTextMessage.builder()
                     .message(descriptionFor(video, linkSent))
                     .replyTo(audioMessage)
                     .disableWebPagePreview(true)
                     .parseMode(ParseMode.MARKDOWN)
+
+            if (inlineKeyboard != null) {
+                md.replyMarkup(inlineKeyboard)
+            }
 
             chat.sendMessage(md.build())
         }
@@ -157,7 +172,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
             }
 
             video.customLength = options.endTime - options.startTime
-            video.fileId = (audioMessage.content as AudioContent).content.fileId
+            video.fileId = fileId
             instance.dataManager.videos.add(video)
             instance.dataManager.saveToFile()
         }
@@ -320,6 +335,13 @@ class VideoCommandHolder(val instance: YoutubeBot) {
     }
 
     fun processSearch(chat: Chat, query: String, userId: Long, originalMessage: Message) {
+        var query = query
+
+        if (query.startsWith("inline:")) {
+            query = query.split(":")[1]
+            pendingInline.put(userId, Any())
+        }
+
         var response = instance.searchVideo(query)
 
         if (response.isEmpty()) {

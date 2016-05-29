@@ -36,6 +36,17 @@ class CommandHandler(val instance: YoutubeBot): Listener {
     override fun onInlineQueryReceived(event: InlineQueryReceivedEvent?) {
         Thread() { run {
             var query = event!!.query
+
+            if (query.query.startsWith("afid:")) {
+                var audioFileId = query.query.split(":")[1]
+                query.answer(instance.bot, InlineQueryResponse.builder()
+                        .results(InlineQueryResultCachedAudio.builder()
+                                .id("1")
+                                .audioFileId(audioFileId)
+                                .build()).is_personal(false).build())
+                return@run
+            }
+
             var linkMatcher = instance.videoRegex.matcher(query.query)
 
             if (linkMatcher.lookingAt()) {
@@ -51,7 +62,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                                 .inputMessageContent(InputTextMessageContent.builder()
                                         .messageText("[Click here to download $title](https://telegram.me/${instance.bot.botUsername}?start=$id)")
                                         .parseMode(ParseMode.MARKDOWN)
-                                        .build()).build()).build())
+                                        .build()).build())
+                                .is_personal(true)
+                                .switch_pm_text("Click to Download!")
+                                .switch_pm_parameter("inline-l:https://www.youtube.com/watch?v=$id").build())
                 return@run
             }
 
@@ -89,7 +103,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                 }
             } }
 
-            query.answer(instance.bot, InlineQueryResponse.builder().results(videos).build())
+            query.answer(instance.bot, InlineQueryResponse.builder().results(videos)
+                    .is_personal(true)
+                    .switch_pm_text("Click to Download")
+                    .switch_pm_parameter("inline:${query.query}").build())
         } }.start()
     }
 
@@ -194,6 +211,11 @@ class CommandHandler(val instance: YoutubeBot): Listener {
     fun processInput(input: String, chat: Chat, message: Message) {
         var userId = message.sender.id
         var link = input.split(" ")[0]
+
+        if (link.startsWith("inline-l:https://www.youtube.com/watch?v=")) {
+            link = link.split(":")[1]
+        }
+
         var videoMatcher = instance.videoRegex.matcher(link)
         var playlistMatcher = instance.playlistRegex.matcher(link)
         var matchesVideo = videoMatcher.find()
