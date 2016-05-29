@@ -293,7 +293,8 @@ class VideoCommandHolder(val instance: YoutubeBot) {
         var session = videoSearch[userId]
 
         if (id == 9) {
-            session!!.chat.sendMessage("Cancelled!")
+            instance.bot.editMessageText(session!!.chat.id, session.botMessageId, "Cancelled search!", ParseMode.MARKDOWN,
+                    true, null)
             instance.commandHandler.flushSessions(userId, session.chat.id)
             return
         }
