@@ -381,12 +381,12 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
                 break // rip
             }
 
-            var contents = title.substring(bracketIndex, endBracketIndex + 1)
+            var contents = progressingTitle.substring(bracketIndex, endBracketIndex + 1)
             progressingTitle = title.substring(endBracketIndex, title.length)
-            bracketIndex = progressingTitle.indexOf('[') + endBracketIndex
+            bracketIndex = progressingTitle.indexOf('[')
 
             if (bracketIndex == -1) {
-                bracketIndex = progressingTitle.indexOf('(') + endBracketIndex
+                bracketIndex = progressingTitle.indexOf('(')
             }
 
             if (contents.toLowerCase().contains("remix")) {
