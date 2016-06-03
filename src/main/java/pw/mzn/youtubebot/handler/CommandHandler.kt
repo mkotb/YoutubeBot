@@ -84,7 +84,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                 } else {
                     var article = InlineQueryResultArticle.builder()
                             .id(idCounter++.toString()) // useless
-                            .title(e.title)
+                            .title(e.title.replace(" - YouTube", ""))
                             .url(URL("https://www.youtube.com/watch?v=${e.videoId}"))
                             .inputMessageContent(InputTextMessageContent.builder()
                                     .messageText("[Click here to download ${e.title}](https://telegram.me/${instance.bot.botUsername}?start=${e.videoId})")
@@ -92,7 +92,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                                     .build())
 
                     if (!"null".equals(e.thumb)) {
-                        article.thumbUrl(URL(e.thumb))
+                        article.thumbUrl(URL(e.thumb)).thumbHeight(300).thumbWidth(300)
                     }
 
                     if (!"null".equals(e.description)) {

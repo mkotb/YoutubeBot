@@ -335,6 +335,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
     }
 
     fun processSearch(chat: Chat, query: String, userId: Long, originalMessage: Message) {
+        println("searching for $query")
         var response = instance.searchVideo(query)
 
         if (response.isEmpty()) {
