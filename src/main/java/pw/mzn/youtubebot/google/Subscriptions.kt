@@ -1,5 +1,6 @@
 package pw.mzn.youtubebot.google
 
+import com.google.api.client.googleapis.batch.BatchRequest
 import com.google.api.client.googleapis.batch.json.JsonBatchCallback
 import com.google.api.client.googleapis.json.GoogleJsonError
 import com.google.api.client.http.HttpHeaders
@@ -20,6 +21,7 @@ class SubscriptionsTask(val instance: YoutubeBot, val timer: Timer): TimerTask()
         var youtube = instance.youtube
         var channels = instance.dataManager.channels.map { e -> e.channelId }
         var batch = youtube.batch()
+        var secondaryBatch = youtube.batch()
         var channelsList = Lists.partition(channels, 5)
 
         channelsList.forEach { e -> run() {
@@ -29,7 +31,7 @@ class SubscriptionsTask(val instance: YoutubeBot, val timer: Timer): TimerTask()
             channelList.id = e.joinToString(",")
             channelList.fields = "items(id,contentDetails/relatedPlaylists/uploads)"
 
-            channelList.queue(batch, ChannelCallback(instance, channelList.key))
+            channelList.queue(batch, ChannelCallback(instance, channelList.key, secondaryBatch))
         } }
 
         println("batching ${batch.size()} requests")
@@ -42,14 +44,23 @@ class SubscriptionsTask(val instance: YoutubeBot, val timer: Timer): TimerTask()
             }
         }
 
+        println("batching ${secondaryBatch.size()} requests")
+
+        if (secondaryBatch.size() >= 1) {
+            try {
+                secondaryBatch.execute()
+            } catch (e: Exception) {
+                e.printStackTrace() // continue exec
+            }
+        }
+
         println("checked for new videos")
         timer.schedule(SubscriptionsTask(instance, timer), TimeUnit.MINUTES.toMillis(30L))
     }
 }
 
-class ChannelCallback(val instance: YoutubeBot, val key: String): JsonBatchCallback<ChannelListResponse>() {
+class ChannelCallback(val instance: YoutubeBot, val key: String, val batch: BatchRequest): JsonBatchCallback<ChannelListResponse>() {
     override fun onSuccess(response: ChannelListResponse?, p1: HttpHeaders?) {
-        var batch = instance.youtube.batch()
         var callback = SubscriptionCallback(instance)
 
         response?.items?.forEach { e -> run() {
@@ -63,16 +74,6 @@ class ChannelCallback(val instance: YoutubeBot, val key: String): JsonBatchCallb
             uploadsList.execute().items
             uploadsList.queue(batch, callback)
         }}
-
-        println("batched ${batch.size()} queries")
-
-        if (batch.size() >= 1) {
-            try {
-                batch.execute()
-            } catch (e: Exception) {
-                e.printStackTrace() // continue execution
-            }
-        }
     }
 
     override fun onFailure(p0: GoogleJsonError?, p1: HttpHeaders?) {
