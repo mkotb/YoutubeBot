@@ -366,7 +366,11 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
         var title = titl.replace(titleRegex.toRegex(), "")
         var index = title.toLowerCase().indexOf("lyrics")
 
-        title = title.replace(title.substring(index, index + 6), "")
+        while (index != -1) {
+            title = title.replace(title.substring(index, index + 6), "")
+            index = title.toLowerCase().indexOf("lyrics")
+        }
+
         title = title.replace("HD", "")
 
         return title.trim()
