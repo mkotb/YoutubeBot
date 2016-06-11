@@ -35,6 +35,7 @@ import kotlin.system.exitProcess
 
 class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String, youtubeClientId: String, youtubeClientSecret: String) {
     val executor = Executors.newFixedThreadPool(2)
+    val titleRegex = Pattern.compile("/((?:\\(|\\[)(?!.*remix).*(?:\\)|\\]))/ig")
     val playlistRegex = Pattern.compile("^.*(youtu\\.be\\/|list=)([^#&?]*).*")
     val videoRegex = Pattern.compile("^(?:https?:\\/\\/)?(?:www\\.)?(?:youtube\\.com|youtu\\.be)\\/watch\\?v=([^&]+)")
     val dataManager = DataManager()
@@ -362,44 +363,9 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
     }
 
     fun cleanTitle(titl: String): String {
-        var title = titl // change to var
-        var progressingTitle = title
-        var bracketIndex = title.indexOf('[')
-
-        if (bracketIndex == -1) {
-            bracketIndex = title.indexOf('(')
-        }
-
-        while (bracketIndex != -1) {
-            var endBracketIndex = progressingTitle.indexOf(']', bracketIndex)
-
-            if (endBracketIndex == -1) {
-                endBracketIndex = progressingTitle.indexOf(')', bracketIndex)
-            }
-
-            if (endBracketIndex == -1) {
-                break // rip
-            }
-
-            var contents = progressingTitle.substring(bracketIndex, endBracketIndex + 1)
-            progressingTitle = title.substring(endBracketIndex, title.length)
-            bracketIndex = progressingTitle.indexOf('[')
-
-            if (bracketIndex == -1) {
-                bracketIndex = progressingTitle.indexOf('(')
-            }
-
-            if (contents.toLowerCase().contains("remix")) {
-                println("continuing, contents=$contents")
-                continue
-            }
-
-            println("replacing $contents. before: $title")
-            title = title.replace(contents, "")
-            println("after: $title")
-        }
-
+        var title = titl.replace(titleRegex.toRegex(), "")
         var index = title.toLowerCase().indexOf("lyrics")
+
         title = title.replace(title.substring(index, index + 6), "")
         title = title.replace("HD", "")
 
