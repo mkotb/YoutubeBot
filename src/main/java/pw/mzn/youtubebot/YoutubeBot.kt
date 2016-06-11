@@ -307,7 +307,43 @@ class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: Strin
     }
 
     fun cleanTitle(titl: String): String {
-        var title = titl.replace(titleRegex.toRegex(), "")
+        var title = titl
+        var progressingTitle = title
+        var bracketIndex = title.indexOf('[')
+
+        if (bracketIndex == -1) {
+            bracketIndex = title.indexOf('(')
+        }
+
+        while (bracketIndex != -1) {
+            var endBracketIndex = progressingTitle.indexOf(']', bracketIndex)
+
+            if (endBracketIndex == -1) {
+                endBracketIndex = progressingTitle.indexOf(')', bracketIndex)
+            }
+
+            if (endBracketIndex == -1) {
+                break // rip
+            }
+
+            var contents = progressingTitle.substring(bracketIndex, endBracketIndex + 1)
+            progressingTitle = title.substring(endBracketIndex, title.length)
+            bracketIndex = progressingTitle.indexOf('[')
+
+            if (bracketIndex == -1) {
+                bracketIndex = progressingTitle.indexOf('(')
+            }
+
+            if (contents.toLowerCase().contains("remix")) {
+                println("continuing, contents=$contents")
+                continue
+            }
+
+            println("replacing $contents. before: $title")
+            title = title.replace(contents, "")
+            println("after: $title")
+        }
+
         var index = title.toLowerCase().indexOf("lyrics")
 
         while (index != -1) {
