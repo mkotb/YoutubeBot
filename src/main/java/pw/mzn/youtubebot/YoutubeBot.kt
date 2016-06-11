@@ -299,9 +299,10 @@ class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: Strin
     }
 
     fun searchTrack(title: String): MutableCollection<Track> {
+        println("searching for ${cleanTitle(title)}")
         var api = Api.DEFAULT_API
         var list = LinkedList<Track>()
-        api.searchTracks(cleanTitle(title)).build().get().items.forEach { e -> list.add(Track(e.name, e.artists[0].name, e.album.images[0].url)) }
+        api.searchTracks(cleanTitle(title)).market("US").build().get().items.forEach { e -> list.add(Track(e.name, e.artists[0].name, e.album.images[0].url)) }
         return list
     }
 
