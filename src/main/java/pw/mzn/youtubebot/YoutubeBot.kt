@@ -5,6 +5,7 @@ import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.services.youtube.YouTube
 import com.mashape.unirest.http.Unirest
+import com.wrapper.spotify.Api
 import org.json.JSONArray
 import org.json.JSONObject
 import pro.zackpollard.telegrambot.api.TelegramBot
@@ -33,7 +34,7 @@ import java.util.regex.Pattern
 import kotlin.properties.Delegates
 import kotlin.system.exitProcess
 
-class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String, youtubeClientId: String, youtubeClientSecret: String) {
+class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: String, youtubeClientSecret: String) {
     val executor = Executors.newFixedThreadPool(2)
     val titleRegex = Pattern.compile("/((?:\\(|\\[)(?!.*remix).*(?:\\)|\\]))/ig")
     val playlistRegex = Pattern.compile("^.*(youtu\\.be\\/|list=)([^#&?]*).*")
@@ -298,68 +299,10 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
     }
 
     fun searchTrack(title: String): MutableCollection<Track> {
-        var response = Unirest.get("https://ws.audioscrobbler.com/2.0/")
-                .queryString("method", "track.search")
-                .queryString("track", cleanTitle(title))
-                .queryString("api_key", lastFmKey)
-                .queryString("format", "json")
-                .asJson()
-
-        if (response.status != 200) {
-            return ArrayList()
-        }
-
-        var matches = response.body.`object`
-                .getJSONObject("results")
-                .getJSONObject("trackmatches")
-                .getJSONArray("track")
-        var list = ArrayList<Track>(matches.length())
-
-        matches.forEach { e -> run {
-            if (e is JSONObject && list.size < 1) {
-                list.add(Track(e.getString("name"), e.getString("artist"),
-                        albumCover(e)))
-            }
-        } }
-
+        var api = Api.DEFAULT_API
+        var list = LinkedList<Track>()
+        api.searchTracks(cleanTitle(title)).build().get().items.forEach { e -> list.add(Track(e.name, e.artists[0].name, e.album.images[0].url)) }
         return list
-    }
-
-    private fun albumCover(e: JSONObject): String {
-        var response = Unirest.get("https://ws.audioscrobbler.com/2.0/")
-                .queryString("method", "track.getInfo")
-                .queryString("track", e.getString("name"))
-                .queryString("artist", e.getString("artist"))
-                .queryString("api_key", lastFmKey)
-                .queryString("format", "json")
-                .asJson().body.`object`
-        var trackInfo = response.getJSONObject("track")
-
-        if (!trackInfo.has("album")) {
-            return searchImage("${e.getString("name")} ${e.getString("artist")} album cover")
-        }
-
-        var album = trackInfo.getJSONObject("album")
-
-        return coverFrom(Unirest.get("https://ws.audioscrobbler.com/2.0/")
-                .queryString("method", "album.getInfo")
-                .queryString("artist", album.getString("artist"))
-                .queryString("album", album.getString("title"))
-                .queryString("api_key", lastFmKey)
-                .queryString("format", "json")
-                .asJson().body.`object`
-                .getJSONObject("album")
-                .getJSONArray("image"))
-    }
-
-    private fun coverFrom(obj: JSONArray): String {
-        var cover = ""
-
-        obj.forEach { e -> if (e is JSONObject && "extralarge".equals(e.getString("size"))) {
-            cover = e.getString("#text")
-        } }
-
-        return cover
     }
 
     fun cleanTitle(titl: String): String {
@@ -374,18 +317,6 @@ class YoutubeBot(val key: String, val youtubeKey: String, val lastFmKey: String,
         title = title.replace("HD", "")
 
         return title.trim()
-    }
-
-    fun searchImage(query: String): String {
-        return (Unirest.get("https://www.googleapis.com/customsearch/v1")
-                .queryString("q", query)
-                .queryString("key", googleKeys[nextKeyIndex()])
-                .queryString("searchType", "image")
-                .queryString("imgSize", "large")
-                .queryString("cx", "000917504380048684589:konlxv5xaaw")
-                .queryString("num", "2").asJson()
-                .body.`object`
-                .getJSONArray("items")[0] as JSONObject).getString("link")
     }
 
     fun nextKeyIndex(): Int {
