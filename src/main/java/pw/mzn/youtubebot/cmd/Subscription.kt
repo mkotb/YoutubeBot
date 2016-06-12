@@ -64,7 +64,19 @@ class SubscriptionCommandHandler(val instance: YoutubeBot) { // sub, unsub
         }
 
         var dataManager = instance.dataManager
-        var matched = dataManager.channels.filter { e -> e.channelName.toLowerCase().contains(event.args[0].toLowerCase())}
+
+        if ("all".equals(event.args[0].toLowerCase())) {
+            dataManager.channels.filter { e -> e.subscribed.contains(event.chat.id.toLong()) }
+                    .forEach { e -> run {
+                        e.subscribed.remove(event.chat.id.toLong())
+                        instance.validateChannel(e)
+                    } }
+
+            event.chat.sendMessage("Successfully unsubscribed from all channels!")
+            return
+        }
+
+        var matched = dataManager.channels.filter { e -> e.channelName.toLowerCase().contains(event.argsString.toLowerCase())}
         matched = matched.filter { e -> e.subscribed.contains(event.chat.id.toLong()) }
 
         if (matched.isEmpty()) {
