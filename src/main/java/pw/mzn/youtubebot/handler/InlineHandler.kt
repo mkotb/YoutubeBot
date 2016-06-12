@@ -6,6 +6,8 @@ import pro.zackpollard.telegrambot.api.chat.message.send.ParseMode
 import pro.zackpollard.telegrambot.api.chat.message.send.SendablePhotoMessage
 import pro.zackpollard.telegrambot.api.event.Listener
 import pro.zackpollard.telegrambot.api.event.chat.CallbackQueryReceivedEvent
+import pro.zackpollard.telegrambot.api.keyboards.InlineKeyboardButton
+import pro.zackpollard.telegrambot.api.keyboards.InlineKeyboardMarkup
 import pw.mzn.youtubebot.IdList
 import pw.mzn.youtubebot.YoutubeBot
 import java.net.URL
@@ -99,35 +101,57 @@ class InlineHandler(val instance: YoutubeBot): Listener {
         }
 
         var video = instance.command.video
-        var selected = "y".equals(data.split(".")[1])
         var trackSession = video.trackStore[callback.from.id]!!
-        var options = trackSession.videoSession.options
-        var track = trackSession.track
+        var selected = "y".equals(data.split(".")[1])
 
-        if (selected) {
-            var message = "Set the title, performer"
-            options.customTitle = track.name
-            options.customPerformer = track.artist
-            var imageUrl = track.coverUrl
+        if ("i".equals(trackSession.stage)) {
+            var options = trackSession.videoSession.options
+            var track = trackSession.track
 
-            if (!"".equals(imageUrl)) {
-                options.thumbnailUrl = imageUrl
-                options.thumbnail = true
-                trackSession.videoSession.thumbnail = imageUrl
-                message += ", and thumbnail for you! Here is a preview of the thumbnail:"
-                trackSession.videoSession.chat.sendMessage(SendablePhotoMessage.builder()
-                        .photo(InputFile(URL(imageUrl)))
-                        .build())
-                println(imageUrl)
+            if (selected) {
+                var message = "Set the title, performer"
+                options.customTitle = track.name
+                options.customPerformer = track.artist
+                var imageUrl = track.coverUrl
+
+                if (!"".equals(imageUrl)) {
+                    options.thumbnailUrl = imageUrl
+                    options.thumbnail = true
+                    trackSession.videoSession.thumbnail = imageUrl
+                    message += ", and thumbnail for you! Here is a preview of the thumbnail:"
+                    trackSession.videoSession.chat.sendMessage(SendablePhotoMessage.builder()
+                            .photo(InputFile(URL(imageUrl)))
+                            .build())
+                    println(imageUrl)
+                } else {
+                    message += " for you!"
+                }
+
+                instance.bot.editMessageText(trackSession.videoSession.chatId, trackSession.videoSession.botMessageId,
+                        message, ParseMode.NONE, false, null)
+                var id = video.videoSessions.add(trackSession.videoSession)
+                video.initCustomization(id, trackSession.videoSession.originalQuery, trackSession.videoSession.chat, trackSession.videoSession.botMessageId)
+                video.trackStore.remove(callback.from.id)
             } else {
-                message += " for you!"
+                var replyKeyboard = InlineKeyboardMarkup.builder()
+                        .addRow(InlineKeyboardButton.builder().text("Yes").callbackData("lf.y").build(),
+                                InlineKeyboardButton.builder().text("No").callbackData("lf.n").build())
+                        .build()
+
+                instance.bot.editMessageText(trackSession.videoSession.chatId, trackSession.videoSession.botMessageId,
+                        "Is this video a song?", ParseMode.NONE, false, replyKeyboard)
+                trackSession.stage = "s"
             }
-
-            instance.bot.editMessageText(trackSession.videoSession.chatId, trackSession.videoSession.botMessageId,
-                    message, ParseMode.NONE, false, null)
+        } else if ("s".equals(trackSession.stage)) {
+            if (selected) {
+                instance.bot.editMessageText(trackSession.videoSession.chatId, trackSession.videoSession.botMessageId,
+                        "Who is the artist of this song?", ParseMode.NONE, false, null)
+                trackSession.stage = "a"
+            } else {
+                var id = video.videoSessions.add(trackSession.videoSession)
+                video.initCustomization(id, trackSession.videoSession.originalQuery, trackSession.videoSession.chat, trackSession.videoSession.botMessageId)
+                video.trackStore.remove(callback.from.id)
+            }
         }
-
-        var id = video.videoSessions.add(trackSession.videoSession)
-        video.initCustomization(id, trackSession.videoSession.originalQuery, trackSession.videoSession.chat, trackSession.videoSession.botMessageId)
     }
 }

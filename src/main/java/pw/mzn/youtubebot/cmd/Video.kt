@@ -11,6 +11,7 @@ import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage
 import pro.zackpollard.telegrambot.api.event.chat.message.TextMessageReceivedEvent
 import pro.zackpollard.telegrambot.api.keyboards.*
 import pw.mzn.youtubebot.IdList
+import pw.mzn.youtubebot.Track
 import pw.mzn.youtubebot.YoutubeBot
 import pw.mzn.youtubebot.extra.*
 import java.io.File
@@ -443,6 +444,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
             session.options.thumbnailUrl = session.thumbnail
             sendVideo(session.chat, session.link, session.linkSent, session.originalQuery, session.userId,
                     session.options, session.duration, titleCache.asMap()[session.videoId]!!, true, session.botMessageId)
+            videoSessions.remove(session)
             return
         }
 
@@ -510,5 +512,37 @@ class VideoCommandHolder(val instance: YoutubeBot) {
         }
 
         session.selecting = selection
+    }
+
+    fun processTrackMessage(event: TextMessageReceivedEvent) {
+        var content = (event.message.content as TextContent).content
+        var session = trackStore[event.chat.id.toLong()]!!
+        var track = session.track
+
+        if ("a".equals(session.stage)) {
+            session.track = Track("n/a", content, "n/a")
+            session.stage = "n"
+            instance.bot.editMessageText(session.videoSession.chatId, session.videoSession.botMessageId,
+                    "What is the name of this song?", ParseMode.NONE, false, null)
+        } else if ("n".equals(session.stage)) {
+            track.name = content
+            track.coverUrl = instance.searchImage("$content ${track.artist} cover")
+
+            var options = session.videoSession.options
+
+            options.customTitle = track.name
+            options.customPerformer = track.artist
+
+            if (!"".equals(track.coverUrl)) {
+                options.thumbnailUrl = track.coverUrl
+                options.thumbnail = true
+                session.videoSession.thumbnail = track.coverUrl
+            }
+
+            var id = videoSessions.add(session.videoSession)
+            initCustomization(id, session.videoSession.originalQuery, session.videoSession.chat,
+                    session.videoSession.botMessageId)
+            trackStore.remove(event.chat.id.toLong())
+        }
     }
 }

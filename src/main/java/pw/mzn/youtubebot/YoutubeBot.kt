@@ -298,12 +298,40 @@ class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: Strin
         return duration
     }
 
-    fun searchTrack(title: String): MutableCollection<Track> {
-        println("searching for ${cleanTitle(title)}")
+    fun searchTrack(titl: String): MutableCollection<Track> {
+        var title = cleanTitle(titl)
+        println("searching for $title")
         var api = Api.DEFAULT_API
         var list = LinkedList<Track>()
-        api.searchTracks(cleanTitle(title)).market("US").build().get().items.forEach { e -> list.add(Track(e.name, e.artists[0].name, e.album.images[0].url)) }
+        api.searchTracks(title).market("US").build().get().items.forEach { e -> list.add(Track(e.name, e.artists[0].name, e.album.images[0].url)) }
+
+        if (list.isEmpty()) {
+            // add one by personal parse
+            var split = title.split("-")
+
+            if (split.size == 1) {
+                return list
+            }
+
+            var artist = split[0].trim()
+            var name = split[1].trim()
+
+            list.add(Track(name, artist, searchImage("$name $artist cover")))
+        }
+
         return list
+    }
+
+    fun searchImage(query: String): String {
+        return (Unirest.get("https://www.googleapis.com/customsearch/v1")
+                .queryString("q", query)
+                .queryString("key", googleKeys[nextKeyIndex()])
+                .queryString("searchType", "image")
+                .queryString("imgSize", "large")
+                .queryString("cx", "000917504380048684589:konlxv5xaaw")
+                .queryString("num", "2").asJson()
+                .body.`object`
+                .getJSONArray("items")[0] as JSONObject).getString("link")
     }
 
     fun cleanTitle(titl: String): String {
@@ -379,7 +407,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: Strin
     }
 }
 
-data class Track(val name: String, val artist: String, val coverUrl: String)
+data class Track(var name: String, var artist: String, var coverUrl: String)
 
 /************************
         TODO List

@@ -201,6 +201,11 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             return
         }
 
+        if (video.trackStore.containsKey(event.chat.id.toLong())) {
+            video.processTrackMessage(event)
+            return
+        }
+
         if (subscription.unsubscribeList.contains(event.chat.id.toLong())) {
             subscription.processUnsubscribeSelection(event)
             return

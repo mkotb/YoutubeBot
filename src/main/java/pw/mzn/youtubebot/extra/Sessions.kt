@@ -27,7 +27,7 @@ data class VideoSession(val instance: YoutubeBot, val chatId: String, val link: 
     }
 }
 
-data class TrackSession(val videoSession: VideoSession, val track: Track)
+data class TrackSession(val videoSession: VideoSession, var track: Track, var stage: String = "i")
 data class MatchSession(val videoSession: VideoSession, val videoId: String, val selections: IdList<String>, var messageId: Long = -1)
 data class SearchSession(val idList: IdList<CachedYoutubeVideo>, val botMessageId: Long, val chat: Chat, val originalQuery: Message)
 
