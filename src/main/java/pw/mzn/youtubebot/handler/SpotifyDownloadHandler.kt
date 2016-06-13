@@ -18,7 +18,7 @@ class SpotifyDownloadHandler(val instance: YoutubeBot) {
         while (true) {
             if (queue.isNotEmpty()) {
                 var youtube = instance.youtube
-                var current = queue.poll()
+                var current = queue.peek()
 
                 current.chat.sendMessage("Starting download of your playlist...")
                 current.tracks.forEach { e -> run() {
@@ -55,6 +55,8 @@ class SpotifyDownloadHandler(val instance: YoutubeBot) {
                     instance.command.video.sendProcessedVideo(video, null, current.chat, current.chat.id.toLong(), true,
                             options, null)
                 } }
+
+                queue.poll()
             }
         }
     }

@@ -201,7 +201,15 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             }
 
             try {
-                var tracks = instance.spotify.getPlaylistTracks(user, playlistId).build().get().items
+                var tracksReq = instance.spotify.getPlaylistTracks(user, playlistId).build().get()
+                var tracks = tracksReq.items
+
+                while (tracksReq.offset == tracksReq.limit) {
+                    tracksReq = instance.spotify.getPlaylistTracks(user, playlistId)
+                            .offset(tracks.size).build().get()
+                    tracks.addAll(tracksReq.items)
+                }
+
                 var trackQueue = instance.spotifyHandler.queue.map { e -> e.tracks.size }.sum()
 
                 tracks.associate { e -> Pair(e, instance.dataManager.videos.firstOrNull { a -> a.customPerformer!!.equals(e.track.artists[0].name) &&
