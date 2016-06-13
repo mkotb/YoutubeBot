@@ -204,7 +204,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                 var tracksReq = instance.spotify.getPlaylistTracks(user, playlistId).build().get()
                 var tracks = tracksReq.items
 
-                while (tracksReq.total != 0) {
+                while (tracksReq.next == null || tracksReq.next.equals("null")) {
                     tracksReq = instance.spotify.getPlaylistTracks(user, playlistId)
                             .offset(tracks.size).build().get()
                     tracks.addAll(tracksReq.items)
