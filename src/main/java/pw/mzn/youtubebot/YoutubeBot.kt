@@ -36,7 +36,7 @@ import kotlin.properties.Delegates
 import kotlin.system.exitProcess
 
 class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: String, youtubeClientSecret: String,
-                 spotifyClientId: String, spotifyClientSecret: String) {
+                 spotifyClientId: String, spotifyClientSecret: String, spotifyToken: String) {
     val executor = Executors.newFixedThreadPool(2)
     val spotifyPlaylistUriRegex = Pattern.compile("^spotify:user:.+:playlist:(.{22})$")
     val spotifyPlaylistUrlRegex = Pattern.compile("https:\\/\\/open\\.spotify\\.com\\/user\\/(.+)\\/playlist\\/(.{22})")
@@ -56,6 +56,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: Strin
     var spotify = Api.builder()
             .clientId(spotifyClientId)
             .clientSecret(spotifyClientSecret)
+            .accessToken(spotifyToken)
             .build()
     var spotifyHandler: SpotifyDownloadHandler by Delegates.notNull()
     var keyIndex = 0
