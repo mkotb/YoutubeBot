@@ -27,10 +27,10 @@ class SpotifyDownloadHandler(val instance: YoutubeBot) {
                     var artist = track.artists[0].name
                     var videos = instance.searchVideo("$artist $name")
                     var mapped = videos.associateBy { e -> e.videoId }
-                    var search = youtube.videos().list("snippet")
+                    var search = youtube.videos().list("id,snippet")
 
                     search.id = videos.map { e -> e.videoId }.joinToString(",")
-                    search.fields = "items(snippet/channelTitle)"
+                    search.fields = "items(id,snippet/channelTitle)"
                     search.key = instance.youtubeKey
 
                     videos = search.execute().items
