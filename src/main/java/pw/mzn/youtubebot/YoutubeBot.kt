@@ -21,6 +21,7 @@ import pw.mzn.youtubebot.google.YTUserAuthentication
 import pw.mzn.youtubebot.handler.CommandHandler
 import pw.mzn.youtubebot.handler.InlineHandler
 import pw.mzn.youtubebot.handler.PhotoHandler
+import pw.mzn.youtubebot.handler.SpotifyDownloadHandler
 import pw.mzn.youtubebot.processing.PlaylistCallable
 import pw.mzn.youtubebot.processing.VideoCallable
 import java.io.*
@@ -36,6 +37,8 @@ import kotlin.system.exitProcess
 
 class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: String, youtubeClientSecret: String) {
     val executor = Executors.newFixedThreadPool(2)
+    val spotifyPlaylistUriRegex = Pattern.compile("^spotify:user:.+:playlist:(.{22})$")
+    val spotifyPlaylistUrlRegex = Pattern.compile("https:\\/\\/open\\.spotify\\.com\\/user\\/(.+)\\/playlist\\/(.{22})")
     val titleRegex = Pattern.compile("/((?:\\(|\\[)(?!.*remix).*(?:\\)|\\]))/ig")
     val playlistRegex = Pattern.compile("^.*(youtu\\.be\\/|list=)([^#&?]*).*")
     val videoRegex = Pattern.compile("^(?:https?:\\/\\/)?(?:www\\.)?(?:youtube\\.com|youtu\\.be)\\/watch\\?v=([^&]+)")
@@ -49,6 +52,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: Strin
     val follower = Follower(this)
     var bot: TelegramBot by Delegates.notNull()
     var youtube: YouTube by Delegates.notNull()
+    var spotifyHandler: SpotifyDownloadHandler by Delegates.notNull()
     var keyIndex = 0
 
     fun init() {
@@ -63,6 +67,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: Strin
         youtube = YouTube.Builder(NetHttpTransport(), JacksonFactory(), HttpRequestInitializer {  })
                 .setApplicationName("ayylmaoproj") // don't ask
                 .build()
+        spotifyHandler = SpotifyDownloadHandler(this)
 
         FollowerTask(follower).run()
 

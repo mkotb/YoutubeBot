@@ -1,5 +1,6 @@
 package pw.mzn.youtubebot.extra
 
+import com.wrapper.spotify.models.PlaylistTrack
 import pro.zackpollard.telegrambot.api.chat.Chat
 import pro.zackpollard.telegrambot.api.chat.message.Message
 import pw.mzn.youtubebot.IdList
@@ -27,6 +28,7 @@ data class VideoSession(val instance: YoutubeBot, val chatId: String, val link: 
     }
 }
 
+data class SpotifyDownloadSession(val chat: Chat, val tracks: List<PlaylistTrack>)
 data class TrackSession(val videoSession: VideoSession, var track: Track, var stage: String = "i")
 data class MatchSession(val videoSession: VideoSession, val videoId: String, val selections: IdList<String>, var messageId: Long = -1)
 data class SearchSession(val idList: IdList<CachedYoutubeVideo>, val botMessageId: Long, val chat: Chat, val originalQuery: Message)

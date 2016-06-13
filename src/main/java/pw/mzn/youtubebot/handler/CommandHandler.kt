@@ -1,6 +1,7 @@
 package pw.mzn.youtubebot.handler
 
 import com.google.common.cache.CacheBuilder
+import com.wrapper.spotify.Api
 import pro.zackpollard.telegrambot.api.chat.Chat
 import pro.zackpollard.telegrambot.api.chat.inline.send.InlineQueryResponse
 import pro.zackpollard.telegrambot.api.chat.inline.send.content.InputTextMessageContent
@@ -173,6 +174,47 @@ class CommandHandler(val instance: YoutubeBot): Listener {
 
         if ("logout".equals(event.command)) {
             instance.youtubeUserAuth.processLogout(event)
+        }
+
+        if ("spotifyplaylist".equals(event.command)) {
+            if (event.args.size < 1) {
+                event.chat.sendMessage("give me")
+                return
+            }
+
+            var playlistString = event.args[0]
+            var playlistId: String
+            var user: String
+
+            if (playlistString.matches(instance.spotifyPlaylistUriRegex.toRegex())) {
+                var args = playlistString.split(":")
+                playlistId = args[4]
+                user = args[2]
+            } else if (playlistString.matches(instance.spotifyPlaylistUrlRegex.toRegex())) {
+                var matcher = instance.spotifyPlaylistUrlRegex.matcher(playlistString)
+                matcher.lookingAt()
+                user = matcher.group(1)
+                playlistId = matcher.group(2)
+            } else {
+                event.chat.sendMessage("Could not match $playlistString with either a spotify link or URI!")
+                return
+            }
+
+            try {
+                var spotifyApi = Api.DEFAULT_API
+                var tracks = spotifyApi.getPlaylistTracks(user, playlistId).build().get().items
+                var trackQueue = instance.spotifyHandler.queue.map { e -> e.tracks.size }.sum()
+
+                tracks.associate { e -> Pair(e, instance.dataManager.videos.firstOrNull { a -> a.customPerformer!!.equals(e.track.artists[0].name) &&
+                        a.customTitle!!.equals(e.track.name) }) }
+                      .filter { e -> e.value != null }
+                      .forEach { e -> event.chat.sendMessage(e.value!!.sendable().build()); tracks.remove(e.key) }
+                instance.spotifyHandler.queue.add(SpotifyDownloadSession(event.chat, tracks))
+                event.chat.sendMessage("Successfully queued ${tracks.size} tracks to be downloaded! " +
+                        "There are $trackQueue tracks before yours!")
+            } catch (e: Exception) {
+                event.chat.sendMessage("Could not get playlist because of: ${e.message}")
+            }
         }
     }
 
