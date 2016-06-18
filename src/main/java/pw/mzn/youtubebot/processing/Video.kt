@@ -63,7 +63,7 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
             }
 
             Files.move(Paths.get("$id.mp3"), Paths.get("$id.old.mp3"))
-            process = ProcessBuilder().command("/usr/bin/ffmpeg", "-i", "$id.old.mp3",
+            process = ProcessBuilder().command("/usr/bin/env", "ffmpeg", "-i", "$id.old.mp3",
                     "-filter:a ", filterArg, "-vn", "$id.mp3")
                     .redirectErrorStream(true)
                     .start()
