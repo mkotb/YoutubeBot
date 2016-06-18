@@ -25,7 +25,7 @@ fun setup(redirect: String, clientId: String, clientSecret: String) {
     var httpServer = AppServer(AppConfiguration(80))
 
     httpServer.get("/start", {
-        if (request.queryParams["state"].equals(state)) {
+        try {
             var code = request.queryParams["code"]
             var credentials = api.authorizationCodeGrant(code).build().get()
             var expiryTimestamp = System.currentTimeMillis() + (credentials.expiresIn * 1000)
@@ -40,6 +40,8 @@ fun setup(redirect: String, clientId: String, clientSecret: String) {
             println("expires at $expiryTimestamp")
 
             response.redirect("https://google.com/")
+        } catch (e: Exception) {
+            e.printStackTrace() //ok
         }
     })
 
