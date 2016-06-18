@@ -131,7 +131,6 @@ class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: Strin
                 .queryString("key", googleKeys[keyIndex])
                 .queryString("cx", "000917504380048684589:konlxv5xaaw")
                 .queryString("siteSearch", "youtube.com")
-                .queryString("num", 2)
                 .asJson().body.`object`
         var array = JSONArray()
 
