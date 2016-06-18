@@ -4,6 +4,7 @@ import com.google.api.client.http.HttpRequestInitializer
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.services.youtube.YouTube
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.mashape.unirest.http.Unirest
 import com.wrapper.spotify.Api
 import org.json.JSONArray
@@ -37,7 +38,8 @@ import kotlin.system.exitProcess
 
 class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: String, youtubeClientSecret: String,
                  spotifyClientId: String, spotifyClientSecret: String, spotifyToken: String, spotifyRefresh: String) {
-    val executor = Executors.newFixedThreadPool(2)
+    val executor = Executors.newFixedThreadPool(2, ThreadFactoryBuilder().setUncaughtExceptionHandler { thread, throwable ->
+        println("there was boo boo"); throwable.printStackTrace() }.build())
     val spotifyPlaylistUriRegex = Pattern.compile("^spotify:user:.+:playlist:(.{22})$")
     val spotifyPlaylistUrlRegex = Pattern.compile("https:\\/\\/open\\.spotify\\.com\\/user\\/(.+)\\/playlist\\/(.{22})")
     val titleRegex = Pattern.compile("/((?:\\(|\\[)(?!.*remix).*(?:\\)|\\]))/ig")
