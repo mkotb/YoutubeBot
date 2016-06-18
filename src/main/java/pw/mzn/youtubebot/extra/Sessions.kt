@@ -28,7 +28,7 @@ data class VideoSession(val instance: YoutubeBot, val chatId: String, val link: 
     }
 }
 
-data class SpotifyDownloadSession(val chat: Chat, val tracks: List<PlaylistTrack>)
+data class SpotifyDownloadSession(val chat: Chat, val tracks: MutableList<PlaylistTrack>)
 data class TrackSession(val videoSession: VideoSession, var track: Track, var stage: String = "i")
 data class MatchSession(val videoSession: VideoSession, val videoId: String, val selections: IdList<String>, var messageId: Long = -1)
 data class SearchSession(val idList: IdList<CachedYoutubeVideo>, val botMessageId: Long, val chat: Chat, val originalQuery: Message)

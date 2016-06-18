@@ -16,7 +16,7 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
             return process()
         } catch (e: Exception) {
             e.printStackTrace()
-            return YoutubeVideo(id, File("N/A"))
+            return YoutubeVideo(id, File("null"))
         }
     }
 

@@ -1,8 +1,11 @@
 package pw.mzn.youtubebot.data
 
 import com.google.api.client.auth.oauth2.StoredCredential
+import com.wrapper.spotify.models.*
 import org.json.JSONArray
 import org.json.JSONObject
+import pw.mzn.youtubebot.YoutubeBot
+import pw.mzn.youtubebot.extra.SpotifyDownloadSession
 import pw.mzn.youtubebot.extra.VideoMetadata
 import pw.mzn.youtubebot.extra.YoutubeVideo
 import java.io.File
@@ -10,15 +13,12 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
 
-class DataManager {
+class DataManager(val instance: YoutubeBot) {
     val dataFile = File("data.json")
     val channels = LinkedList<SavedChannel>()
     val credentials = HashMap<String, StoredCredential>()
     val videos = LinkedList<YoutubeVideo>()
-
-    init {
-        loadFromFile()
-    }
+    val spotifySessions = LinkedList<SpotifyDownloadSession>()
 
     fun loadFromFile() {
         if (!dataFile.exists()) {
@@ -66,6 +66,38 @@ class DataManager {
                         video.customLength = e.getLong("custom_length")
 
                     videos.add(video)
+                }
+            } }
+        }
+
+        if (obj.has("spotify_dl_sessions")) {
+            obj.getJSONArray("spotify_dl_sessions").forEach { e -> run {
+                if (e is JSONObject) {
+                    var chat = instance.bot.getChat(obj.getString("id"))
+                    var tracks = ArrayList<PlaylistTrack>()
+
+                    e.getJSONArray("tracks").forEach { e -> run {
+                        if (e is JSONObject) {
+                            var holder = PlaylistTrack()
+                            var track = Track()
+                            var artist = SimpleArtist()
+                            var album = SimpleAlbum()
+                            var image = Image()
+
+                            image.url = e.getString("cover")
+                            album.images = mutableListOf(image)
+                            artist.name = e.getString("artist")
+
+                            track.name = e.getString("name")
+                            track.artists = mutableListOf(artist)
+                            track.album = album
+
+                            holder.track = track
+                            tracks.add(holder)
+                        }
+                    } }
+
+                    spotifySessions.add(SpotifyDownloadSession(chat, tracks))
                 }
             } }
         }
@@ -122,6 +154,26 @@ class DataManager {
             } }
 
             obj.put("cached_videos", converted)
+        }
+
+        var spotifySessions = instance.spotifyHandler.queue.toList()
+
+        if (spotifySessions.isNotEmpty()) {
+            var converted = JSONArray()
+
+            spotifySessions.forEach { e -> run {
+                var tracksConverted = JSONArray()
+
+                e.tracks.forEach { e -> tracksConverted.put(JSONObject()
+                        .put("name", e.track.name)
+                        .put("artist", e.track.artists[0].name)
+                        .put("cover", e.track.album.images[0].url)) }
+
+                converted.put(JSONObject().put("id", e.chat.id)
+                        .put("tracks", tracksConverted))
+            } }
+
+            obj.put("spotify_dl_sessions", converted)
         }
 
         Files.write(Paths.get(dataFile.absolutePath), obj.toString().toByteArray())

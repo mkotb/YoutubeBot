@@ -45,7 +45,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: Strin
     val titleRegex = Pattern.compile("/((?:\\(|\\[)(?!.*remix).*(?:\\)|\\]))/ig")
     val playlistRegex = Pattern.compile("^.*(youtu\\.be\\/|list=)([^#&?]*).*")
     val videoRegex = Pattern.compile("^(?:https?:\\/\\/)?(?:www\\.)?(?:youtube\\.com|youtu\\.be)\\/watch\\?v=([^&]+)")
-    val dataManager = DataManager()
+    val dataManager = DataManager(this)
     val executable = File("youtube-dl")
     val googleKeys = Files.readAllLines(Paths.get("gm_keys"))
     val commandHandler = CommandHandler(this)
@@ -72,6 +72,8 @@ class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: Strin
         bot.eventsManager.register(inlineHandler)
         bot.eventsManager.register(PhotoHandler(this))
         bot.startUpdates(false)
+
+        dataManager.loadFromFile()
 
         youtube = YouTube.Builder(NetHttpTransport(), JacksonFactory(), HttpRequestInitializer {  })
                 .setApplicationName("ayylmaoproj") // don't ask

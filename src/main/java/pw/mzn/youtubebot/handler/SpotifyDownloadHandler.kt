@@ -45,9 +45,11 @@ class SpotifyDownloadHandler(val instance: YoutubeBot) {
             if (queue.isNotEmpty()) {
                 var youtube = instance.youtube
                 var current = queue.peek()
+                var trackIterator = current.tracks.listIterator()
 
                 current.chat.sendMessage("Starting download of your playlist...")
-                current.tracks.forEach { e -> run() {
+                while (trackIterator.hasNext()) {
+                    var e = trackIterator.next()
                     var track = e.track
                     var name = track.name
                     var artist = track.artists[0].name
@@ -66,6 +68,9 @@ class SpotifyDownloadHandler(val instance: YoutubeBot) {
                             .values.map { e -> e!! }
                             .toList()
 
+                    trackIterator.remove()
+                    instance.dataManager.saveToFile()
+
                     if (videos.isEmpty()) {
                         current.chat.sendMessage("Could not find a suitable video for $name by $artist")
                         return@run
@@ -75,7 +80,7 @@ class SpotifyDownloadHandler(val instance: YoutubeBot) {
                     var options = VideoOptions(0, 0, false, 1.0, !"".equals(cover), cover, artist, name)
                     var video = instance.downloadVideo(options, videos[0].videoId)
 
-                    if (video.file.name.equals("N/A")) {
+                    if (video.file.name.equals("null")) {
                         current.chat.sendMessage("There was an error downloading $name, id: ${video.id}. Moving on...")
                         return@run
                     }
@@ -83,9 +88,14 @@ class SpotifyDownloadHandler(val instance: YoutubeBot) {
                     video.customPerformer = artist
                     video.customTitle = name
 
-                    instance.command.video.sendProcessedVideo(video, null, current.chat, current.chat.id.toLong(), true,
-                            options, null)
-                } }
+                    try {
+                        instance.command.video.sendProcessedVideo(video, null, current.chat, current.chat.id.toLong(), true,
+                                options, null)
+                    } catch (e: Exception) {
+                        current.chat.sendMessage("There was an error downloading $name, id: ${video.id}. Moving on...")
+                        e.printStackTrace()
+                    }
+                }
 
                 queue.poll()
             }
