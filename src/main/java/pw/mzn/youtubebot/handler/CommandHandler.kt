@@ -1,7 +1,6 @@
 package pw.mzn.youtubebot.handler
 
 import com.google.common.cache.CacheBuilder
-import com.wrapper.spotify.Api
 import pro.zackpollard.telegrambot.api.chat.Chat
 import pro.zackpollard.telegrambot.api.chat.inline.send.InlineQueryResponse
 import pro.zackpollard.telegrambot.api.chat.inline.send.content.InputTextMessageContent

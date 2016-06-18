@@ -3,7 +3,11 @@ package pw.mzn.youtubebot.handler
 import pw.mzn.youtubebot.YoutubeBot
 import pw.mzn.youtubebot.extra.SpotifyDownloadSession
 import pw.mzn.youtubebot.extra.VideoOptions
+import java.io.File
+import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
+import kotlin.concurrent.schedule
+import kotlin.system.exitProcess
 
 class SpotifyDownloadHandler(val instance: YoutubeBot) {
     val queue = ConcurrentLinkedQueue<SpotifyDownloadSession>()
@@ -12,6 +16,28 @@ class SpotifyDownloadHandler(val instance: YoutubeBot) {
         Thread() {
             run()
         }.start()
+
+        refreshRun(Timer())
+    }
+
+    fun refreshRun(timer: Timer) {
+        var refreshFile = File("spotify-refresh.timestamp")
+
+        if (!refreshFile.exists()) {
+            println("Could not find the refresh stamp! Shutting down..")
+            exitProcess(0)
+        }
+
+        var time = refreshFile.readText().toLong()
+
+        timer.schedule(time) {
+            var spotify = instance.spotify
+            var refreshCred = spotify.refreshAccessToken().build().get()
+
+            refreshFile.writeText("${System.currentTimeMillis() + (refreshCred.expiresIn * 1000)}")
+            println("refreshed spotify token")
+            refreshRun(timer)
+        }
     }
 
     fun run() {

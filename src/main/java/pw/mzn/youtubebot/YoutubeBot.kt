@@ -36,7 +36,7 @@ import kotlin.properties.Delegates
 import kotlin.system.exitProcess
 
 class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: String, youtubeClientSecret: String,
-                 spotifyClientId: String, spotifyClientSecret: String, spotifyToken: String) {
+                 spotifyClientId: String, spotifyClientSecret: String, spotifyToken: String, spotifyRefresh: String) {
     val executor = Executors.newFixedThreadPool(2)
     val spotifyPlaylistUriRegex = Pattern.compile("^spotify:user:.+:playlist:(.{22})$")
     val spotifyPlaylistUrlRegex = Pattern.compile("https:\\/\\/open\\.spotify\\.com\\/user\\/(.+)\\/playlist\\/(.{22})")
@@ -57,6 +57,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: Strin
             .clientId(spotifyClientId)
             .clientSecret(spotifyClientSecret)
             .accessToken(spotifyToken)
+            .refreshToken(spotifyRefresh)
             .build()
     var spotifyHandler: SpotifyDownloadHandler by Delegates.notNull()
     var keyIndex = 0
@@ -419,12 +420,3 @@ class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: Strin
 }
 
 data class Track(var name: String, var artist: String, var coverUrl: String)
-
-/************************
-        TODO List
- - (Big one) Allow users to link the bot to a playlist and have all their
-   downloaded videos be added to the playlist, and use the bot as a "player"
-   being able to index through the playlist and select the song they want.
-   Then the bot will return the song (or songs, maybe allow things like shuffling
-   or full playthrough) accordingly though telegram cache (i.e save the upload IDs of songs)
- ************************/
