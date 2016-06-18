@@ -30,7 +30,7 @@ class SpotifyDownloadHandler(val instance: YoutubeBot) {
 
         var time = refreshFile.readText().toLong()
 
-        timer.schedule(System.currentTimeMillis() - time - 60000) {
+        timer.schedule(time - System.currentTimeMillis() - 60000) {
             var spotify = instance.spotify
             var refreshCred = spotify.refreshAccessToken().build().get()
 
