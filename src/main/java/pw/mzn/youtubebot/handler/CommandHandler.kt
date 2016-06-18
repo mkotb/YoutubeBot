@@ -209,6 +209,7 @@ class CommandHandler(val instance: YoutubeBot): Listener {
                     tracks.addAll(tracksReq.items)
                 }
 
+                tracks.removeAll { e -> e.track.duration >= TimeUnit.MINUTES.toMillis(30L) }
                 var trackQueue = instance.spotifyHandler.queue.map { e -> e.tracks.size }.sum()
 
                 tracks.associate { e -> Pair(e, instance.dataManager.videos.firstOrNull { a -> a.customPerformer!!.equals(e.track.artists[0].name) &&

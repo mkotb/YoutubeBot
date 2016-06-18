@@ -414,7 +414,6 @@ class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: Strin
                 .directory(directory)
                 .start()
         process.waitFor()
-        println(InputStreamReader(process.inputStream).readLines().joinToString("\n"))
         println("finished setting thumbnail")
         File("$id.mp3").delete()
         Files.move(Paths.get("$id.mp3.mp3"), Paths.get("$id.mp3"))
