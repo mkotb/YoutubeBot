@@ -75,6 +75,11 @@ class SpotifyDownloadHandler(val instance: YoutubeBot) {
                     var options = VideoOptions(0, 0, false, 1.0, !"".equals(cover), cover, artist, name)
                     var video = instance.downloadVideo(options, videos[0].videoId)
 
+                    if (video.file.name.equals("N/A")) {
+                        current.chat.sendMessage("There was an error downloading $name, id: ${video.id}. Moving on...")
+                        return@run
+                    }
+
                     video.customPerformer = artist
                     video.customTitle = name
 

@@ -12,6 +12,15 @@ import java.util.concurrent.Callable
 
 class VideoCallable(val id: String, val options: VideoOptions, val instance: YoutubeBot): Callable<YoutubeVideo> {
     override fun call(): YoutubeVideo {
+        try {
+            return process()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return YoutubeVideo(id, File("N/A"))
+        }
+    }
+
+    fun process(): YoutubeVideo {
         println("Downloading $id...")
         var commandBuilder = LinkedList<String>(Arrays.asList("./youtube-dl", "-v", "--yes-playlist",
                 "--write-info-json", "--id", "--audio-format", "mp3", "--audio-quality", "0", "-x"))
