@@ -409,7 +409,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: Strin
     }
 
     fun setThumbnail(id: String, directory: File) {
-        ProcessBuilder().command("/usr/bin/lame", "--ti", "$id.jpg", "$id.mp3")
+        ProcessBuilder().command("/usr/bin/lame", "--ti", "${id.replace("-", "\\-")}.jpg", "${id.replace("-", "\\-")}.mp3")
                 .redirectErrorStream(true)
                 .directory(directory)
                 .start()
