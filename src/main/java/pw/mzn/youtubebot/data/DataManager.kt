@@ -26,7 +26,7 @@ class DataManager(val instance: YoutubeBot) {
             return // no need to read, nothing there
         }
 
-        var obj = JSONObject(Files.readAllLines(Paths.get(dataFile.absolutePath)).joinToString(""))
+        var obj = JSONObject(Files.readAllLines(Paths.get(dataFile.absolutePath)).joinToString("\n"))
 
         if (obj.has("channels")) {
             obj.getJSONArray("channels").forEach { e -> run {
