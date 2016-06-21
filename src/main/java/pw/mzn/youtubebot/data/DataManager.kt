@@ -73,6 +73,9 @@ class DataManager(val instance: YoutubeBot) {
         if (obj.has("spotify_dl_sessions")) {
             obj.getJSONArray("spotify_dl_sessions").forEach { e -> run {
                 if (e is JSONObject) {
+                    if (!obj.has("id") || !obj.has("tracks"))
+                        return@run
+
                     var chat = instance.bot.getChat(obj.getString("id"))
                     var tracks = ArrayList<PlaylistTrack>()
 
