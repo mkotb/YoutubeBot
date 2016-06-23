@@ -32,7 +32,7 @@ class VideoCallable(val id: String, val options: VideoOptions, val instance: You
 
         if (!postProcessArgs.isEmpty()) {
             commandBuilder.add("--postprocessor-args")
-            commandBuilder.add("${instance.addSplit(postProcessArgs, " ").replace("'", "\'")}")
+            commandBuilder.add("\"${instance.addSplit(postProcessArgs, " ").replace("'", "\'")}\"")
         }
 
         commandBuilder.add("https://www.youtube.com/watch?v=$id")
