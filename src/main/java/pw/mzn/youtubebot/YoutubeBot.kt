@@ -318,7 +318,9 @@ class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: Strin
         println("searching for $title")
         var api = Api.DEFAULT_API
         var list = LinkedList<Track>()
-        api.searchTracks(title).market("US").build().get().items.forEach { e -> list.add(Track(e.name, e.artists[0].name, e.album.images[0].url)) }
+        api.searchTracks(title).market("US").build().get().items
+                .filter { e -> e.artists.isNotEmpty() && e.album.images.isNotEmpty() }
+                .forEach { e -> list.add(Track(e.name, e.artists[0].name, e.album.images[0].url)) }
 
         if (list.isEmpty()) {
             // add one by personal parse
