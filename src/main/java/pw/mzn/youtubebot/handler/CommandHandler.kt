@@ -289,7 +289,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
         flushSessions(userId, chat.id)
 
         if (!matchesVideo && !matchesPlaylist) {
-            instance.command.video.processSearch(chat, input, userId, message)
+            if (!instance.command.video.checkCache(chat, input, userId, message)) {
+                instance.command.video.processSearch(chat, input, userId, message)
+            }
+
             return
         }
 

@@ -19,7 +19,7 @@ data class VideoSession(val instance: YoutubeBot, val chatId: String, val link: 
                         val chat: Chat, val linkSent: Boolean, val userId: Long,
                         val originalQuery: Message?, val duration: Long, var thumbnail: String = "N/A", var selecting: String = "N/A",
                         var botMessageId: Long = -1L, var pendingImage: Boolean = false) {
-    val videoId: String
+    var videoId: String
 
     init {
         var regex = instance.videoRegex.matcher(link)
@@ -30,7 +30,7 @@ data class VideoSession(val instance: YoutubeBot, val chatId: String, val link: 
 
 data class SpotifyDownloadSession(val chat: Chat, val tracks: MutableList<PlaylistTrack>)
 data class TrackSession(val videoSession: VideoSession, var track: Track, var stage: String = "i")
-data class MatchSession(val videoSession: VideoSession, val videoId: String, val selections: IdList<String>, var messageId: Long = -1)
+data class MatchSession(val videoSession: VideoSession, var videoId: String, val selections: IdList<String>, var messageId: Long = -1)
 data class SearchSession(val idList: IdList<CachedYoutubeVideo>, val botMessageId: Long, val chat: Chat, val originalQuery: Message)
 
 data class CachedYoutubeVideo(val videoId: String, val title: String, val thumb: String, val description: String)
