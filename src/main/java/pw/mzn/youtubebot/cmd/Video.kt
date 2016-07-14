@@ -345,8 +345,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
         var session = VideoSession(instance, chat.id, "https://youtube.com/watch?v=0t2tjNqGyJI", VideoOptions(),
                 chat, false, userId, originalMessage, 0L)
         var savedMatches = instance.dataManager.videos
-                .filter { video -> video.customTitle!!.contains(query) || query.contains(video.customTitle!!) }
-                .sortedBy { video -> query.contains(video.customTitle!!) && query.contains(video.customPerformer!!)}
+                .filter { video -> containsEquals(video.customTitle!!, query) || containsEquals(query, video.customTitle!!) }
 
         if (savedMatches.isNotEmpty()) {
             var matchSession = MatchSession(session, "0t2tjNqGyJI", IdList<String>())
@@ -363,10 +362,16 @@ class VideoCommandHolder(val instance: YoutubeBot) {
                     .message("I found some song presets which matches your query, please select the one which matches your search best")
                     .replyMarkup(keyboardBuilder.build())
                     .build()).messageId
+            println("cache")
             return true
         }
 
+        println("$query did not match any in cache ${instance.dataManager.videos.size}")
         return false
+    }
+
+    private fun containsEquals(str: String, str1: String): Boolean {
+        return str.contains(str1) || str.equals(str1)
     }
 
     fun processSearch(chat: Chat, query: String, userId: Long, originalMessage: Message) {
