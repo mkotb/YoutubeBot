@@ -73,6 +73,10 @@ class CommandHandler(val instance: YoutubeBot): Listener {
             var videos = ArrayList<InlineQueryResult>(response.size)
             var idCounter = 1
 
+            if (response.size >= 3) {
+                response = response.subList(0, 3)
+            }
+
             response.forEach { e -> run {
                 var cached = instance.dataManager.videosBy(e.videoId)
 
