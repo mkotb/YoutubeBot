@@ -102,6 +102,36 @@
                     </descriptorRefs>
                 </configuration>
             </plugin>
+
+            <plugin>
+                <groupId>com.mycila.maven-license-plugin</groupId>
+                <artifactId>maven-license-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <configuration>
+                            <quiet>true</quiet>
+                            <encoding>UTF-8</encoding>
+                            <strictCheck>true</strictCheck>
+                            <header>./LICENSE</header>
+                            <mapping>
+                                <java>SLASHSTAR_STYLE</java>
+                                <kt>SLASHSTAR_STYLE</kt>
+                            </mapping>
+                            <keywords>
+                                <keyword>license</keyword>
+                            </keywords>
+                            <includes>
+                                <include>src/main/java/**</include>
+                                <include>src/test/java/**</include>
+                            </includes>
+                        </configuration>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>format</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>
