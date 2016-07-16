@@ -299,6 +299,7 @@ class YoutubeBot(val key: String, val youtubeKey: String, youtubeClientId: Strin
             if (!silent) {
                 chat!!.sendMessage("This bot is unable to process videos longer than 1 hour! Sorry!")
             }
+
             return -1L
         }
 
