@@ -360,7 +360,7 @@ class VideoCommandHolder(val instance: YoutubeBot) {
         var session = VideoSession(instance, chat.id, "https://youtube.com/watch?v=0t2tjNqGyJI", VideoOptions(),
                 chat, false, userId, originalMessage, 0L)
         var savedMatches = instance.dataManager.videos
-                .filter { video -> containsEquals(video.customTitle!!, query) || containsEquals(query, video.customTitle!!) }
+                .filter { video -> containsEquals(video.customTitle!!, query) }
 
         if (savedMatches.isNotEmpty()) {
             var matchSession = MatchSession(session, "0t2tjNqGyJI", IdList<String>())
