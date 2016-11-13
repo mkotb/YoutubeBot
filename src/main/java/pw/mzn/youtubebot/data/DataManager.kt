@@ -174,26 +174,6 @@ class DataManager(val instance: YoutubeBot) {
             obj.put("cached_videos", converted)
         }
 
-        var spotifySessions = instance.spotifyHandler.queue.toList()
-
-        if (spotifySessions.isNotEmpty()) {
-            var converted = JSONArray()
-
-            spotifySessions.forEach { e -> run {
-                var tracksConverted = JSONArray()
-
-                e.tracks.forEach { e -> tracksConverted.put(JSONObject()
-                        .put("name", e.track.name)
-                        .put("artist", e.track.artists[0].name)
-                        .put("cover", e.track.album.images[0].url)) }
-
-                converted.put(JSONObject().put("id", e.chat.id)
-                        .put("tracks", tracksConverted))
-            } }
-
-            obj.put("spotify_dl_sessions", converted)
-        }
-
         Files.write(Paths.get(dataFile.absolutePath), obj.toString().toByteArray())
     }
 
