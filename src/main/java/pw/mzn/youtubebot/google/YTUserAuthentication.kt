@@ -42,12 +42,12 @@ class YTUserAuthentication(val instance: YoutubeBot, val clientId: String, val c
     init {
         instance.dataManager.credentials.forEach { e -> codeFlow.credentialDataStore.set(e.key, e.value) }
 
-        httpServer.get("/start", {
+        /*httpServer.get("/start", {
             codes.put(request.queryParams["state"], request.queryParams["code"])
             response.redirect("https://telegram.me/${instance.bot.botUsername}?start=login-${request.queryParams["state"]}")
         })
 
-        httpServer.start(false)
+        httpServer.start(false)*/
     }
 
     fun processLogin(event: CommandMessageReceivedEvent) {
